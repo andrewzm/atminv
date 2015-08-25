@@ -1,5 +1,176 @@
-\documentclass{article}
+\documentclass[a4paper,11pt]{article}
+ 
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{amssymb,amsmath}
+\usepackage{bm}
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{setspace}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage[normalem]{ulem}
 
+\newcommand{\zerob} {{\bf 0}}
+\newcommand{\oneb} {{\bf 1}}
+\newcommand{\expect} {{\mathbb{E}}}
+\newcommand{\pt} {\tilde{p}}
+\newcommand{\alphat} {\tilde{\alpha}}
+\newcommand{\betat} {\tilde{\beta}}
+\newcommand{\pb} {\bar{p}}
+\newcommand{\thetab} {{\boldsymbol{\theta}}}
+\newcommand{\alphab} {{\boldsymbol{\alpha}}}
+\newcommand{\kappab} {{\boldsymbol{\kappa}}}
+\newcommand{\sigmab} {{\boldsymbol{\sigma}}}
+\newcommand{\nub} {{\boldsymbol{\nub}}}
+\newcommand{\gammab} {{\boldsymbol{\gamma}}}
+\newcommand{\deltab} {{\boldsymbol{\delta}}}
+\newcommand{\Deltab} {{\boldsymbol{\Delta}}}
+\newcommand{\etab} {{\boldsymbol{\eta}}}
+\newcommand{\Thetab} {{\boldsymbol{\Theta}}}
+\newcommand{\varthetab} {{\boldsymbol{\vartheta}}}
+\newcommand{\Yset} {\mathcal{Y}}
+\newcommand{\Xset} {\mathcal{X}}
+\newcommand{\intd} {\textrm{d}}
+\newcommand{\phib} {\boldsymbol{\phi}}
+\newcommand{\zetab} {\boldsymbol{\zeta}}
+\newcommand{\psib} {\boldsymbol{\psi}}
+\newcommand{\Sigmawinv} {{\boldsymbol{\it \Sigma}}_w^{-1}}
+\newcommand{\Sigmamat} {{\bm \Sigma}}
+\newcommand{\Sigmamatt} {\widetilde{\boldsymbol{\Sigma}}}
+\newcommand{\Qmatt} {\widetilde{\textbf{Q}}}
+\newcommand{\muvect} {\widetilde{\boldsymbol{\mu}}}
+\newcommand{\Psib} {{\bm \Psi}}
+\newcommand{\Upsilonmat} {{\boldsymbol{\it \Upsilon}}}
+\newcommand{\Lambdamat} {\mathbf{\Lambda}}
+\newcommand{\Gammamat} {{\boldsymbol{\it \Gamma}}}
+\renewcommand{\Gammamat} {{\boldsymbol{\Gamma}}}
+\newcommand{\Pimat} {{\boldsymbol{\it \Pi}}}
+\newcommand{\Amat} {\textbf{A}}
+\newcommand{\Bmat} {\textbf{B}}
+\newcommand{\Dmat} {\textbf{D}}
+\newcommand{\Gmat} {\textbf{G}}
+\newcommand{\Lmat} {\textbf{L}}
+\newcommand{\Qmat} {\textbf{Q}}
+\newcommand{\Rmat} {\textbf{R}}
+\newcommand{\Tmat} {\textbf{T}}
+\newcommand{\Qt} {\widetilde{\textbf{Q}}}
+\newcommand{\Qtinv} {\widetilde{\textbf{Q}}^{-1}}
+\newcommand{\Mmat} {\textbf{M}}
+\newcommand{\Cmat} {\mathbf{C}}
+\newcommand{\Jmat} {\mathbf{J}}
+\newcommand{\cmat} {\textbf{c}}
+\newcommand{\Kmat} {\textbf{K}}
+\newcommand{\Zmat} {\textbf{Z}}
+\newcommand{\Xmat} {\textbf{X}}
+\newcommand{\Xvec} {\mathbf{X}}
+\newcommand{\Imat} {\textbf{I}}
+\newcommand{\Umat} {\textbf{U}}
+\newcommand{\Pmat} {\textbf{P}}
+\newcommand{\Hmat} {\textbf{H}}
+\newcommand{\Vmat} {\textbf{V}}
+\newcommand{\bvec} {\textbf{b}}
+\newcommand{\dvec} {\textbf{d}}
+\newcommand{\avec} {\textbf{a}}
+\newcommand{\evec} {\textbf{e}}
+\newcommand{\hvec} {\textbf{h}}
+\newcommand{\xvec} {\textbf{x}}
+\newcommand{\yvec} {\textbf{y}}
+\newcommand{\zvec} {\textbf{z}}
+\newcommand{\wvec} {\textbf{w}}
+\newcommand{\vvec} {\textbf{v}}
+\newcommand{\svec} {\textbf{s}}
+\newcommand{\uvec} {\textbf{u}}
+\newcommand{\gvec} {\textbf{g}}
+\newcommand{\fvec} {\textbf{f}}
+\newcommand{\rvec} {\textbf{r}}
+\newcommand{\muvec} {\boldsymbol{\mu}}
+\newcommand{\Psix} {{\boldsymbol{\it \Psi}}_{\xvec}}
+\newcommand{\Phimat} {{\boldsymbol{\it \Phi}}}
+\newcommand{\Psitheta} {{\boldsymbol{\it \Psi}}_{\varthetab}}
+\newcommand{\Psia} {{\boldsymbol{\it \Psi}}_{A}}
+\newcommand{\Psixinv} {{\boldsymbol{\it \Psi}}_{\xvec}^{-1}}
+\newcommand{\vvm} {\boldsymbol {\mathcal \upsilon}}
+\newcommand{\upsilonb} {\boldsymbol {\upsilon}}
+\newcommand{\betab} {\boldsymbol {\beta}}
+\newcommand{\omegab} {\boldsymbol {\omega}}
+\newcommand{\Aop}{\boldsymbol{\mathcal{A}}}
+\newcommand{\ICE} {\textit{ICE}}
+\newcommand{\GIA} {\textit{GIA}}
+\newcommand{\GPS} {\textit{GPS}}
+\newcommand{\ERS} {\textit{ERS}}
+\newcommand{\GR} {\textit{GR}}
+\newcommand{\IS} {\textit{IS}}
+\newcommand{\ES} {\textit{ES}}
+\newcommand{\zeroes}{\mathop{\textrm{zeroes}}}
+\newcommand{\odd}{\mathop{\textrm{odd}}}
+\newcommand{\even}{\mathop{\textrm{even}}}
+\newcommand{\ff} {\textit{ff}}
+\newcommand{\fm} {\textit{fm}}
+\newcommand{\mf} {\textit{mf}}
+\newcommand{\inv} {\textit{inv}}
+
+\renewcommand{\zerob}{\mathbf{0}}
+\renewcommand{\v}{\mathbf{v}}
+\renewcommand{\u}{\mathbf{u}}
+\newcommand{\w}{\mathbf{w}}
+\renewcommand{\d}{\mathrm{d}}
+\newcommand{\Z}{\mathbf{Z}}
+\newcommand{\X}{\mathbf{X}}
+\newcommand{\x}{\mathbf{x}}
+\newcommand{\Y}{\mathbf{Y}}
+\newcommand{\Yvec}{\mathbf{Y}}
+\newcommand{\Yt}{\widetilde{\mathbf{Y}}}
+\newcommand{\Zvec}{\mathbf{Z}}
+%\newcommand{\epsilonb}{\mbox{\boldmath{$\varepsilon$}}}                                                                                                                                                       
+\newcommand{\epsilonb}{\boldsymbol{\varepsilon}}
+\newcommand{\bS}{\mathbf{S}}
+\newcommand{\bK}{\mathbf{K}}
+\newcommand{\bI}{\mathbf{I}}
+\newcommand{\bR}{\mathbf{R}}
+\newcommand{\bC}{\mathbf{C}}
+\newcommand{\bB}{\mathbf{B}}
+\newcommand{\bP}{\mathbf{P}}
+\newcommand{\bQ}{\mathbf{Q}}
+\renewcommand{\L}{\mathbf{L}}
+\newcommand{\E}{\mathrm{E}}
+\newcommand{\cov}{\mathrm{cov}}
+\newcommand{\var}{\mathrm{var}}
+\newcommand{\Dist}{\mathrm{Dist}}
+\renewcommand{\prec}{\mathrm{prec}}
+\newcommand{\tr}{\mathrm{tr}}
+\newcommand{\diag}{\mathrm{diag}}
+\newcommand{\sgn}{\mathrm{sgn}}
+\newcommand{\trace}{\mathrm{tr}}
+\newcommand{\vect}{\mathrm{vec}}
+\newcommand{\Gau}{\mathrm{Gau}}
+
+\newcommand{\RR}{\mathbb{R}}
+
+\newcommand{\s}{\mathbf{s}}
+\newcommand{\p}{\mathbf{p}}
+\renewcommand{\a}{\mathbf{a}}
+\newcommand{\h}{\mathbf{h}}
+\renewcommand{\b}{\mathbf{b}}
+\renewcommand{\c}{\mathbf{c}}
+\newcommand{\z}{\mathbf{z}}
+
+
+\newcommand{\blambda}{\boldsymbol{\lambda}}
+\newcommand{\btheta}{\boldsymbol{\theta}}
+\newcommand{\balpha}{\boldsymbol{\alpha}}
+\newcommand{\bgamma}{\boldsymbol{\gamma}}
+\newcommand{\bbeta}{\boldsymbol{\beta}}
+\newcommand{\bzero}{\boldsymbol{0}}
+\newcommand{\bmu}{\boldsymbol{\mu}}
+\newcommand{\bSigma}{\bm{\Sigma}}
+
+
+ <<include=FALSE>>=
+opts_knit$set(width=40)
+@
+ 
 \begin{document}
 
 \begin{abstract}
@@ -17,156 +188,241 @@ install_github("andrewzm/hmc")
 install_github("andrewzm/atminv")
 @
 
-This only needs to be done once. Now that we have the development packages installed, we can now load the others that we will need. The first two, \texttt{ggplot2} and \texttt{grid} are plotting purposes. The package \texttt{dplyr} is used for fast table manipulation and for `piping' a sequence of commands. The package \texttt{Matrix} is needed for taking advantage of sparsity in some operations and \texttt{tidyr} is needed for rearranging tables. Finall the in-house developed packages \texttt{hmc} and \texttt{atminv} are used for implementing the Hamiltonian Monte Carlo sampler and the EM algorithm for parameter estimation, respectively.
+This only needs to be done once. Now that we have the development packages installed, we can now load the others that we will need. The first two, \texttt{ggplot2} and \texttt{grid} are plotting purposes. The package \texttt{dplyr} is used for fast table manipulation and for `piping' a sequence of commands. The package \texttt{Matrix} is needed for taking advantage of sparsity in some operations and \texttt{tidyr} is needed for rearranging tables. The package \texttt{gstat} is needed for variogram modelling of the flux field. Finally the in-house developed packages \texttt{hmc} and \texttt{atminv} are used for implementing the Hamiltonian Monte Carlo sampler and the EM algorithm for parameter estimation, respectively.
 
-<<loadPkgs>>=
-## This problem ONLY works if b is of relatively local scope. Once we have b which has a very large scope we get oscillations/instability
+<<loadPkgs,message=FALSE>>=
 library(ggplot2)
 library(grid)
 library(dplyr)
 library(Matrix)
 library(tidyr)
+library(gstat)
 library(hmc)
-#library(atminv)
+library(atminv)
 # load_all("../../../pkgs//hmc")
-library(devtools)
-load_all("..")
+#library(devtools)
+#load_all("..")
 #library(scales) # for format_format
 #load_all("../../../../../CurrentProjects/PostDoc Bristol/R Code/pkg/MVST")
 @
 
-We will now set up our simulation. Here we will only be concerned with the model `full' (please ignore the other settings), which can be misspecified (\texttt{misspecification = 1}) or not (\texttt{misspecification = 0}).
-<<>>=
+We will now set up our simulation. Here we will only be concerned with the model `full' (`full\_big' analyses the case with 1000 observations and `diag' the case where the flux field is uncorrelated), which can be misspecified (\texttt{misspecification = 1}) or not (\texttt{misspecification = 0}). Recall the by misspecification here we imply that the flux field is indeed spatially correlated, but that we will model is as being uncorrelated. Below we set up the spatio-temporal grid and establish the parameters of the observation process and the mole-fraction discrepancy spaio-temporal field:
+
+<<ST-grid>>=
 ###------------------
 ### Parameters
 ###------------------
 model = "full" ## Either sparse or full or full_big or diag
 misspecification = 0
 #set.seed(25) # 25 , T = 400 or 15/200
-ds <- 0.2 ## If we change this we need to change the round() command further down
-smin = -10 + ds/2
-smax =  10 - ds/2
-s_axis <- round(seq(smin,smax,by=ds),1)
+ds <- 0.2            # 0.2 spacing. 
+                     # NB: If we change this we need to 
+                     # change the round() command further down
+smin = -10 + ds/2    # first gridcell centre
+smax =  10 - ds/2    # last gridcell centre
+
+s_axis <- round(seq(smin,smax,by=ds),1) # create s-axis
 if(model %in% c("full","diag")) {
-  t_axis <- 1:100 #372
-  m_obs <- 6
+  t_axis <- 1:100                       # create t-axis
+  m_obs <- 6                            # number of obs. (including val.)
 } else {
-  t_axis <- 1:100
-  m_obs <- 1000
+  t_axis <- 1:100                       # create t-axis
+  m_obs <- 1000                         # number of obs.
 }
-ns <- length(s_axis)
-nt <- length(t_axis)
-st_grid <- expand.grid(s=s_axis,t=t_axis) %>% data.frame()
 
-# Observation parameters
-sigma_eps_true <- 10 # 0.1
+ns <- length(s_axis)                    # no. of gridcells
+nt <- length(t_axis)                    # no. of time points
+st_grid <- expand.grid(s=s_axis,        # ST-grid (long format)
+                       t=t_axis) %>% 
+            data.frame()
 
-
-# 'full' model parameters
+sigma_eps_true <- 10                    # observation error std.
 if(model %in% c("full","full_big")) {
-  sigma_zeta_true <- 50 #1
+  sigma_zeta_true <- 50                 # discrepancy marginal std.
 } else {
-  sigma_zeta_true <- 10
+  sigma_zeta_true <- 10                 # discrepancy marginal std.
 }
 
-theta_t_true <- 0.8
-theta_s_true <- 1
+theta_t_true <- 0.8     # temporal correlation parameter ('a' in text)
+theta_s_true <- 1       # spatial range parameter ('d' in text)
+@
 
-# 'sparse' model parameters
-theta_t_true <- 0.8
-theta_s_true <- 1
+Now we are ready to create a stochastic process, the realisations of which exhibit similar characteristics to what we will be studying in the real example. Recall that the stochastic process we use is:
+\begin{equation}\label{eq:bt}                                                                                   b_t(s,u\mid  \upsilon_t(s)) \equiv \exp\left(-\frac{(u-s)^2}{2\upsilon_t(s)^2}\right)I\big(|u-s| < |\upsilon_t(s)|\big)J(s,u),                                                                                 
+\end{equation}
+\noindent where
+\begin{equation*}                                                                                               J(s,u) \equiv \left\{ \begin{array}{ll} I[(u-s) \ge 0]; & \upsilon_t(s) \ge 0, \\                                                                                                                              
+                                        I[(u-s) \le 0]; & \upsilon_t(s) < 0,                                    \end{array}\right.                                                                                                                                                                                             
+\end{equation*}
+where $\upsilon_t(s)$ from a Gaussian process with separable spatio-temporal covariance structure and $I(\cdot)$ is the indicator function. In \eqref{eq:bt}, the exponential function describes a bell-shaped curve centred at $u = s$, while the indicator function truncates this curve at $u = s \pm \upsilon_t(s)$. The third term, $J(s,u)$, then truncates the bottom half of the function if $\upsilon_t(s) \ge 0$ and the upper half otherwise. The function $(s,u\mid  \upsilon_t(s))$ is implemented as follows
 
+<<bfun>>=
 ###------------------
-### Transition kernel: p is a ST process and reflects the std of the truncated Gaussian.
+### Transition kernel 
 ###------------------
+# p is a ST process and reflects the std of the truncated Gaussian.
+# This problem ONLY works if b is of relatively local scope. Once we 
+# have b which has a very large scope we get oscillations/instability
+
 b <- function(s,u,p) {
   absp <- max(abs(p),0.2)
   absp*sqrt(2*pi) * dnorm(u,mean = s, sd =absp) *
     ((sign(p) == sign(u-s)) | (u-s) == 0) *
     (abs(u - s) < absp)
 }
+@
 
+\noindent while the spatio-temporal Gaussian parameter is simulated from a separable field as follows:
+
+<<Wind>>=
 ## Sample the "wind" vector
-Q_s <- GMRF_RW(n = length(s_axis),order = 2,precinc = 2000)@Q + 0.001*.symDiagonal(length(s_axis))
-Q_t <- GMRF_RW(n = length(t_axis),order = 1,precinc = 20)@Q + 0.1*.symDiagonal(length(t_axis))
-Q_full = as(kronecker(Q_t,Q_s),"dgCMatrix")
-G <- GMRF(mu = matrix(rep(0,nrow(Q_full))),Q = Q_full,n=nrow(Q_full))
+Q_s <- GMRF_RW(n = length(s_axis),
+               order = 2,
+               precinc = 2000)@Q + 
+          0.001*.symDiagonal(length(s_axis))  # spatial precision
+Q_t <- GMRF_RW(n = length(t_axis),
+               order = 1,
+               precinc = 20)@Q +   
+          0.1*.symDiagonal(length(t_axis))    # temporal precision
 
-load("~/Desktop/Chemometrics_results/sim.Random.seed.rda")
+Q_full = as(kronecker(Q_t,Q_s),"dgCMatrix")   # spatio-temporal precision
+
+G <- GMRF(mu = matrix(rep(0,nrow(Q_full))),   # GMRF with final precision
+          Q = Q_full,n=nrow(Q_full))
+
+# Load the seed we used to simulate this parameter
+data(sim.Random.seed)
+#load("~/Desktop/Chemometrics_results/sim.Random.seed.rda")
+
+# Now simulate this parameter by sampling from the GMRF
 st_grid$p <- sample_GMRF(G,reps = 1)
-#fields::image.plot(matrix(st_grid$p,ns,nt))
+@
 
-## Simulate the atmosphere
+If we want we can take a look at what the realisation of the parameter $\upsilon_t(s)$ looks like through
+<<upsilon-plot1,fig.keep=FALSE,eval=FALSE>>=
+print(LinePlotTheme() + geom_tile(data=st_grid,aes(s,t,fill=p)))
+@
+\noindent the result of which is depicted in Figure \ref{fig:upsilon}
+
+\begin{figure}
+\begin{center}
+<<upsilon-plot2,fig.height=3,fig.width=3>>=
+print(ggplot(st_grid) + geom_tile(aes(s,t,fill=p)))
+@
+\end{center}
+\caption{The parameter $\upsilon_t(s)$ simulated from the separable spatio-temporal process}
+\label{fig:upsilon}
+\end{figure}
+
+<<SRR1,include=FALSE,eval=FALSE>>=
+## Simulate the SRR at one location, s = 9.1
 s_sim <- 9.1
 Z <- matrix(0,nt,ns)
 for( i in 1 : nrow(Z)) {
-  Z[i,] <- b(s = s_sim, u = s_axis,p = as.numeric(subset(st_grid,s== s_sim & t==i)$p))
+  Z[i,] <- b(s = s_sim, 
+             u = s_axis,
+             p = as.numeric(subset(st_grid,s== s_sim & t==i)$p))
 }
+@
+
+\section{Process and observation simulation}
+
+\subsection{Simulating the flux field}
+
+Now that we have the parameters in place, we can simulate our dataset. We first re-set the seed to `1', then construct a semi-variogram with the parameters identical to those estimated from the Emissions data, before simulating our vector $\Yvec_f$:
+
+<<sim-Yf>>=
 ###------------------
 ### Lognormal flux field
 ###------------------
-set.seed(1) # 1 for sparse obs
-#S_f_log <- Matern(r = as.matrix(dist(s_axis)),nu = 1.5,var = 1,kappa = kappa_from_l(3,nu = 1.5))
-variogram_model <- gstat::vgm(range = 3.334,nugget = 0.00533,psill = 0.80429,model= "Sph")
-S_f_log <- gstat::variogramLine(variogram_model,
-                           dist_vector = sp::spDists(matrix(s_axis),
+set.seed(1)
+variogram_model <- vgm(range = 3.334,            # Construct spherical semi-variogram
+                              nugget = 0.00533,
+                              psill = 0.80429,
+                              model= "Sph")
+S_f_log <- variogramLine(variogram_model,        # Find covariance matrix Sigma_f
+                         dist_vector = sp::spDists(matrix(s_axis),
                                                  matrix(s_axis)),
-                           covariance = TRUE)
-mu_f_log <- matrix(rep(5,length(s_axis)))
-Yf_sim <- exp(mu_f_log + t(chol(S_f_log)) %*% rnorm(n = length(s_axis)))
-st_grid <- st_grid %>%
-left_join(data.frame(s=s_axis,Yf = Yf_sim))
+                          covariance = TRUE)
+mu_f_log <- matrix(rep(5,length(s_axis)))        # Construct mu_f
+Yf_sim <- exp(mu_f_log + t(chol(S_f_log)) %*%    # Simulate Y_f
+                rnorm(n = length(s_axis)))
+st_grid <- st_grid %>%                           # Append Y_f to data frame
+          left_join(data.frame(s=s_axis,
+                               Yf = Yf_sim))
 
-if(misspecification)  {
-    S_f_log <- diag(diag(S_f_log))
+if(misspecification)  {                           # If we are assuming misspecification
+    S_f_log <- diag(diag(S_f_log))                # We over-write Sigma_f to be diagonal
 }
+@
 
+\subsection{Simulating the mole fraction field}
+
+Since the spatio-temporal discrepancy term can be hard to simulate from withour further approximations, we will just simulate it at the observation locations. Therefore, the mole fraction (excluding the discrepancy) is just a linear transformation of the flux field. For each space-time location we find the SRR between the whole domain (the source) and that point (the receptor) and multiply it by the the flux in the that gridcell:
+
+<<>>=
 ###------------------
 ### Mole fraction field
 ###------------------
-### Since we cannot put the discrepancy everywhere (too large), we will just put it at the observation locations
+## Since we cannot put the discrepancy everywhere (too large), 
+## we will just put it at the observation locations
 st_grid <- st_grid %>%
-  group_by(t,s,p) %>%
-  summarise(Yf = Yf,
-            Ym = sum(b(s =s, u = s_axis,p = p) * Yf_sim * ds))
+  group_by(t,s,p) %>% # for each space-time location
+  summarise(Yf = Yf,  # find the mole-fraction by finding the SRR
+            Ym = sum(b(s =s, u = s_axis,p = p) * 
+                       Yf_sim * ds))
+@
 
+\subsection{Simulating the observations}
+
+We randomly choose \texttt{m\_obs} observations from the spatial grid (excluding the lower and upper 10 grid cells) and assume these are observed. We replace the 6-th observation location with $s = 0.3$ that will be used for validation.
+
+<<>>=
 ###------------------
 ### Observations
 ###------------------
 if(model %in% c("full","diag")) {
-      s_obs <- data.frame(s = sample(s_axis[-c(1:10,(ns-10):ns)],size = m_obs,
-                                     replace=F),m = 1:m_obs  )
+      s_obs <- data.frame(s = sample(s_axis[-c(1:10,(ns-10):ns)],
+                                     size = m_obs,
+                                     replace=F),
+                          m = 1:m_obs  )
     new_obs <- 0.3
     s_obs[6,]$s <- new_obs
-#     s_obs <- data.frame(s = sample(c(-7.1, -3.1, 0.1, 2.5, 7.1, 8.5),size = m_obs,
-#                                    replace=F),m = 1:m_obs)
 } else {
-  s_obs <- data.frame(s = sample(s_axis,size = m_obs, replace=T),m = 1:m_obs)
+  s_obs <- data.frame(s = sample(s_axis,size = m_obs, replace=T),
+                      m = 1:m_obs)
 }
-  #s_obs <- data.frame(s = round(c(-8.1,-4.1,0.1,4.1,8.1),1),m = 1:m_obs) %>%
-  s_obs <- s_obs %>%
-            left_join(st_grid) %>%
-            mutate(z = Ym + rnorm(n = length(Ym), sd = sigma_eps_true)) %>%
-            arrange(t,s)
+@
 
-## Now add the discrepancy (stupid to add it after but too large to do before)
+Now we merge the observation data frame with the spaio-temporal grid and add the observation error, before sorting the data frame by time and space:
+
+<<>>=
+s_obs <- s_obs %>%
+            left_join(st_grid) %>%
+            mutate(z = Ym + rnorm(n = length(Ym), 
+                                  sd = sigma_eps_true)) %>%
+            arrange(t,s)
+Qobs <- sigma_eps_true^(-2) * .symDiagonal(nrow(s_obs))
+@
+
+To add the discrepancy, we first compuate the spatio-temporal covariance matrix at the observation (space-time) locations using the \texttt{corr\_zeta\_fn} function in the \texttt{atminv} package, find its Cholesky decomposition and then use it to simulate the discrepancy at the required locations. For when we have 2000 observations (\texttt{model = `full\_big'}) we find the covariance matrix at every space-time grid location and use assign the discrepancy to the observations at the grid level. The variable \texttt{C\_m} below is an $m \times m$ identity matrix that will be used later on in the program:
+
+<<>>=
+## Now add the discrepancy
 if(model %in% c("full","diag")) {
 
-    corr_s_mat <- function(theta_s) corr_s(s = s_obs$s[1:m_obs],theta_s = theta_s)
-    corr_t_mat <- function(theta_t) corr_t(t = t_axis,theta_t = theta_t)
-    d_corr_s_mat <- function(theta_s) d_corr_s(s = s_obs$s[1:m_obs],theta_s = theta_s)
-    d_corr_t_mat <- function(theta_t) d_corr_t(t = t_axis,theta_t = theta_t)
-
-    corr_zeta_true <- corr_zeta_fn(s_obs$s[1:m_obs],t_axis,theta_t_true, theta_s_true)
+    corr_zeta_true <- corr_zeta_fn(s_obs$s[1:m_obs],
+                                   t_axis,
+                                   theta_t_true, 
+                                   theta_s_true)
     S_zeta_true <- sigma_zeta_true^2 * corr_zeta_true
     chol_S_zeta_true <- chol(S_zeta_true)
 
-    C_m <- .symDiagonal(nrow(s_obs))
-
     s_obs <- s_obs %>%
-      mutate(dis = t(chol_S_zeta_true) %*% rnorm(n = nrow(s_obs)),
+      mutate(dis = t(chol_S_zeta_true) %*%  rnorm(n = nrow(s_obs)),
              z = z + dis)
-
+    
+    C_m <- .symDiagonal(nrow(s_obs))
 } else if(model == "full_big") {
 
     corr_s_mat <- function(theta_s) corr_s(s = s_axis,theta_s = theta_s)
@@ -180,18 +436,26 @@ if(model %in% c("full","diag")) {
       mutate(n = 1:nrow(st_grid)) %>%
       left_join(s_obs,.)
 
-    C_m <- sparseMatrix(i=1:nrow(C_idx),j = C_idx$n,x=1,dims=c(nrow(s_obs),nrow(st_grid)))
+    C_m <- sparseMatrix(i=1:nrow(C_idx),
+                        j = C_idx$n,
+                        x=1,
+                        dims=c(nrow(s_obs),nrow(st_grid)))
 
-
-
-    chol_S_zeta_true <-  sigma_zeta_true * kronecker(chol(corr_t_mat(theta_t_true)),
-                                                     chol(corr_s_mat(theta_s_true)))
+    chol_S_zeta_true <-  sigma_zeta_true * 
+                              kronecker(chol(corr_t_mat(theta_t_true)),
+                                        chol(corr_s_mat(theta_s_true)))
 
     s_obs <- s_obs %>%
-        mutate(dis = as.vector(C_m %*% (t(chol_S_zeta_true) %*% rnorm(n = ns*nt))),
+        mutate(dis = as.vector(C_m %*% 
+                                 (t(chol_S_zeta_true) %*% 
+                                    rnorm(n = ns*nt))),
                z = z + dis)
+}
+@
 
-} else if (model=="sparse") {
+<<deprecated-sparse,include=FALSE>>=
+# Not relavant to vignette
+if (model=="sparse") {
 
   Q_s_mat <- function() Q_s(s = s_axis)
   Q_t_mat <- function(theta_t) Q_t(t = t_axis,theta_t = theta_t)
@@ -215,24 +479,45 @@ if(model %in% c("full","diag")) {
            z = z + dis)
 
 }
+@
 
-C_f <- Zeromat(nrow(s_obs),ns)
-C_full <- cBind(C_f,C_m)
-Qobs <- sigma_eps_true^(-2) * .symDiagonal(nrow(s_obs))
+\subsection{Illustrative plots}
 
+Here we provide the code for generating the two plots in the paper (Figure 3). The first, in Figure \ref{fig:YfYm}, shows the average mole fraction and the flux field superimposed:
+
+<<>>=
 if(model == "full") {
     X <- group_by(st_grid,s) %>%
         summarise(Yf = Yf[1],Ym_av = mean(Ym)) %>%
         gather(process,value,-s)
-    g <- LinePlotTheme() + geom_line(data=subset(X,!(s==new_obs)),aes(x=s,y=value,linetype=as.factor(process)))+
-        geom_segment(data=s_obs[1:5,],aes(x=s, xend=s, y = 0, yend = 50),
-                     arrow=arrow(length=unit(0.1,"cm"))) +
+    g <- LinePlotTheme() + 
+          geom_line(data=subset(X,!(s==new_obs)),
+                    aes(x=s,y=value,linetype=as.factor(process)))+
+          geom_segment(data=s_obs[1:5,],
+                       aes(x=s, xend=s, y = 0, yend = 50),
+                        arrow=arrow(length=unit(0.1,"cm"))) +
         ylab("") +
-        scale_linetype_discrete(guide=guide_legend(title="process"),labels=c("Yf (g/s/degree)","Ym (ppb)")) +
+        scale_linetype_discrete(guide=guide_legend(title="process"),
+                                labels=c("Yf (g/s/degree)","Ym (ppb)")) +
         xlab("s (degrees)")
     ggsave(g,filename = "../../Sim_plot.png",width=10,height=4)
-    print(g)
-    
+}
+@
+
+\begin{figure}
+\begin{center}
+<<YfYm-plot,fig.height=5,fig.width=10>>=
+print(g)
+@
+\end{center}
+\caption{A sample realisation of the flux field (solid line), the resulting time-averaged mole-fraction field (dashed line) and the five observation locations (arrows).}
+\label{fig:YfYm}
+\end{figure}
+
+
+<<deprecated-old-plot,include=FALSE,eval=FALSE>>=
+## Old plot, deprecated
+if(model == "full") {
     source("../../R/ggplot_dual_axis.R")
     g1 <- LinePlotTheme() + geom_line(data=subset(X,!(s==new_obs) & process=="Yf"),aes(x=s,y=value)) + ylab("Yf (g/s/degree)") + theme(text = element_text(size=15),axis.title.y=element_text(vjust=0.6)) + xlab("s (degrees)")
     g2 <- LinePlotTheme() + geom_line(data=subset(X,!(s==new_obs) & process=="Ym_av"),aes(x=s,y=value),linetype="dashed") + ylim(0,900) + theme(text = element_text(size=15),axis.title.y=element_text(vjust=0.6)) +
@@ -242,10 +527,9 @@ if(model == "full") {
 }
 @
 
-<<eval=FALSE,include=FALSE>>=
-
+<<deprecated-emulation,eval=FALSE,include=FALSE>>=
 ###----------------------------------
-### Emulation
+### Emulation (deprecated!)
 ###----------------------------------
 if(F) {
 
@@ -315,11 +599,11 @@ if(F) {
     geom_tile(aes(x=round(s0p + hp,1),y=tp,fill=as.factor(s0p),alpha=pmax(zp,0.7))) +
     scale_alpha_continuous(range = c(0,1))
 }
+@
 
-###----------------------------------------------------
-### Joint covariance matrix -- for now ignore emulator
-###----------------------------------------------------
+The second, in Figure \ref{fig:B}, shows the SRR at each observation location:
 
+<<eval=TRUE,include=TRUE,message=FALSE>>=
 if(model %in% c("full","diag")) {
   df_for_B <- s_obs
 } else {
@@ -348,43 +632,59 @@ B_true_df <- plyr::ddply(df_for_B,c("t","s"),function(df) {
 
 if(model == "full") {
   ## Plot the source-receptor relationship at each observation
-#   B_plot <- LinePlotTheme() + geom_tile(data=subset(B_true_df ,b>0),
-#                                         aes(x=s_fine,y=t,fill=as.factor(s),alpha=b)) +
-#     scale_alpha_continuous(range=c(0,1)) + xlab("u") +
-#     scale_fill_discrete(guide=guide_legend(title="s")) +
-#     coord_fixed(xlim=c(-10,10),ratio = 0.2)
-  B_plot <- LinePlotTheme() + geom_tile(data=subset(B_true_df ,b>0 & !(s==new_obs)),
-                                        aes(x=s_fine,y=t,alpha=b),fill="black") +
+
+  ## The following code uses colours and shows the SRR on one plot  
+  #   B_plot <- LinePlotTheme() + 
+  #             geom_tile(data=subset(B_true_df ,b>0),
+  #                       aes(x=s_fine,y=t,fill=as.factor(s),alpha=b)) +
+  #     scale_alpha_continuous(range=c(0,1)) + xlab("u") +
+  #     scale_fill_discrete(guide=guide_legend(title="s")) +
+  #     coord_fixed(xlim=c(-10,10),ratio = 0.2)
+  
+  ## The following code shows one SRR per plot  
+  B_plot <- LinePlotTheme() + 
+    geom_tile(data=subset(B_true_df,b>0 & !(s==new_obs)),
+              aes(x=s_fine,y=t,alpha=b),fill="black") +
     scale_alpha_continuous(guide=guide_legend(title="s/ng")) +
-      scale_y_reverse()+
+    scale_y_reverse()+
     scale_fill_discrete(guide=guide_legend(title="s")) +
     coord_fixed(xlim=c(-10,10),ratio = 0.5)  +
-        facet_grid(~s) +
-    theme(panel.margin = unit(1.5, "lines")) + xlab("u (degrees)") + ylab("t (2 h steps)")
+    facet_grid(~s) +
+    theme(panel.margin = unit(1.5, "lines")) + 
+    xlab("u (degrees)") + 
+    ylab("t (2 h steps)")
   ggsave(filename = "../../B_plot.png",width=12)
 }
+@
 
-mu_f <- matrix(exp(0.5*diag(S_f_log)))
-mu_m <- as.matrix(B %*% mu_f)
-mu <- rbind(mu_f,mu_m)
+\begin{figure}
+\begin{center}
+<<B-plot,fig.height=6,fig.width=10>>=
+print(B_plot)
+@
+\end{center}
+\caption{ The source-receptor relationship $b_t(s,u)$ synthesised at five observation locations $s \in D^O_m = \{-5.3^\circ, -4.5^\circ,-3.9^\circ,-3.7^\circ,-0.1^\circ \}$. Note that $b_t(s,u) = 0$ for $u > 4.3$}
+\label{fig:B}
+\end{figure}
 
 
-S_f <- exp(S_f_log[1,1]) *(exp(S_f_log) - 1)
-S_fm <- S_f %*% t(B)
-S_mf <- B %*% S_f
-
+<<deprecated-other-figure,include=FALSE,eval=FALSE>>=
 if(model == "full") {
   BT1 <- data.frame(s = s_axis,t(B[141:145,])) %>% gather(obs,b,-s)
   base_plot <- LinePlotTheme() + geom_line(data = subset(st_grid,t==1),aes(x=s,y=Yf)) +
     geom_point(data=subset(s_obs,t==1),aes(x=s,y=0),colour="red",size=3) +
     geom_ribbon(data=subset(BT1,b>0), aes(x = s,ymax = b*100,ymin=0,group=obs,fill=obs),alpha=0.5,stat="identity")
 }
+@
 
-
+<<deprecated-Bayes-Linear,include=FALSE,eval=FALSE>>=
 ###----------------------------------------------------
 ### Bayes Linear
 ###----------------------------------------------------
 if(F) {
+  C_f <- Zeromat(nrow(s_obs),ns)
+  C_full <- cBind(C_f,C_m)
+
   corr_zeta <- crossprod(kronecker(chol_corr_zeta_t_true,chol_corr_zeta_s_true))
   #corr_zeta <- diag(rep(1,nrow(s_obs)))
 
@@ -425,16 +725,30 @@ if(F) {
     print(sigma2_zeta)
   }
 }
+@
 
+\section{Inference}
+
+In this section we show the code for carrying inference on the bivariate field $(\Yvec_f,\Yvec_m)'$. We first compute the mean flux density 
+
+<<>>=
+mu_f <- matrix(exp(mu_f_log + 0.5*diag(S_f_log)))
+print(mu_f[1])
+# mu_m <- as.matrix(B %*% mu_f)
+# mu <- rbind(mu_f,mu_m)
+# S_f <- exp(S_f_log[1,1]) *(exp(S_f_log) - 1)
+# S_fm <- S_f %*% t(B)
+# S_mf <- B %*% S_f
+@
+
+
+<<>>=
 ###-----------------------------------------------------
 ### Laplace method -- use with caution because of mode close to zero
 ###-----------------------------------------------------
 if(model == "full") {
   n_EM <- 100
   s_mol = s_obs$s[1:m_obs]
-#   Zmat <- matrix(s_obs$z,nrow=5)
-#   Zmat <- rbind(Zmat,Zmat[5,])
-#   Y_init = c(mu_f,c(Zmat))
   Y_init = c(mu_f,s_obs$z)
   theta_init = c(1000,0.2,0.2)
 
@@ -461,8 +775,9 @@ if(model == "full") {
     Y_init = c(mu_f,st_grid$Ym)
     theta_init = c(1000,0.2,0.2)
 }
+@
 
-
+<<>>=
 EM_alg <- EM(s_obs = s_obs,
         C_m = C_m,
         Qobs = Qobs,
@@ -477,7 +792,10 @@ EM_alg <- EM(s_obs = s_obs,
         ind = which(!(colSums(B) == 0)),
         n_EM = n_EM,
         model = model)
+@
 
+
+<<include=FALSE,eval=FALSE>>=
 breakme
 readline("Press enter to run EM algorithm")
 for(i in 1:(n_EM-2)) {
