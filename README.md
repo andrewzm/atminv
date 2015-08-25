@@ -38,6 +38,17 @@ If you do not wish to compile the vignette (which takes a while) please set `bui
     
 and select the vignette under `atminv`.
 
+Versions
+--------
+
+The results in the paper were carried out with 
+
+    R version 3.2.0 (2015-04-16)
+    Platform: x86_64-pc-linux-gnu (64-bit)
+    Running under: Ubuntu 14.04.2 LTS
+
+The `Matrix` package is v1.2-0. Results may change slightly across different `R` and package versions.
+
 References
 -----
 
