@@ -558,6 +558,8 @@ d_corr_t <- function(t,theta_t) {as.matrix(dist(matrix(t))) * corr_t(t,theta_t) 
 corr_s <- function(s,theta_s) {exp(-as.matrix(dist(s)/theta_s))}
 d_corr_s <- function(s,theta_s) {theta_s^(-2)*as.matrix(dist(s)) * corr_s(s,theta_s)}
 
+#' @title Correlation zeta
+#' @export 
 corr_zeta_fn <- function(s,t,theta_t,theta_s) {
   corr_zeta_t <- corr_t(t,theta_t)
   corr_zeta_s <- corr_s(s,theta_s)
@@ -578,7 +580,15 @@ Q_zeta_fn <- function(s,t,theta_t,add=F) {
   Q_zeta <- kronecker(Q_zeta_t,Q_zeta_s)
 }
 
-
+#' @title Create an empty sparse matrix
+#'
+#' @description Creates an empty sparse matrix of size ni x nj
+#' @param ni number of rows
+#' @param nj number of columns. If NULL a square matrix is produced
+#' @export
+#' @examples 
+#' require(Matrix)
+#' Q <- Zeromat(2,5)
 Zeromat <- function (ni, nj = NULL) 
 {
     if (is.null(nj)) 
@@ -588,6 +598,14 @@ Zeromat <- function (ni, nj = NULL)
     }, dims = c(ni, nj)), "dgCMatrix"))
 }
 
+#' @title Find the log determinant
+#'
+#' @description Find the log determinant of a matrix Q from its Cholesky factor L (which could be permutated or not)
+#' @param L the Cholesky factor of Q
+#' @examples 
+#' require(Matrix)
+#' Q <- sparseMatrix(i=c(1,1,2,2),j=c(1,2,1,2),x=c(0.1,0.2,0.2,1))
+#' logdet(chol(Q))
 logdet <- function(L)  {
     ## Find the log-determinant of Q from its Cholesky L
     diagL <- diag(L)

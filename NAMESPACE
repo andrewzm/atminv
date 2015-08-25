@@ -2,6 +2,9 @@
 
 export(GMRF)
 export(GMRF_RW)
+export(LinePlotTheme)
+export(Zeromat)
+export(corr_zeta_fn)
 export(sample_GMRF)
 import(Matrix)
 import(ggplot2)
