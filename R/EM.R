@@ -486,6 +486,8 @@ M_step_fns_sparse <- function(Estep,Q_t,Q_s,d_Q_t,d_Q_s, B, ind=ind) {
        gr_logf = gr_logf)
 }
 
+#' @title Functions for Yf
+#' @export
 Yf_marg_approx_fns <- function(s_obs,
                                C_m,
                                Qobs,

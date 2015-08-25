@@ -168,6 +168,7 @@
 
 
  <<include=FALSE>>=
+library(knitr)
 opts_knit$set(width=40)
 @
  
@@ -300,14 +301,20 @@ st_grid$p <- sample_GMRF(G,reps = 1)
 
 If we want we can take a look at what the realisation of the parameter $\upsilon_t(s)$ looks like through
 <<upsilon-plot1,fig.keep=FALSE,eval=FALSE>>=
-print(LinePlotTheme() + geom_tile(data=st_grid,aes(s,t,fill=p)))
+print(LinePlotTheme() + 
+        geom_tile(data=st_grid,aes(s,t,fill=p)) +
+        scale_fill_gradient2(low="blue",high="red",mid="white")
+      )
 @
 \noindent the result of which is depicted in Figure \ref{fig:upsilon}
 
 \begin{figure}
 \begin{center}
-<<upsilon-plot2,fig.height=3,fig.width=3>>=
-print(ggplot(st_grid) + geom_tile(aes(s,t,fill=p)))
+<<upsilon-plot2,fig.height=6,fig.width=5>>=
+print(LinePlotTheme() + 
+        geom_tile(data=st_grid,aes(s,t,fill=p)) +
+        scale_fill_gradient2(low="blue",high="red",mid="white")
+      )
 @
 \end{center}
 \caption{The parameter $\upsilon_t(s)$ simulated from the separable spatio-temporal process}
@@ -336,11 +343,11 @@ Now that we have the parameters in place, we can simulate our dataset. We first 
 ### Lognormal flux field
 ###------------------
 set.seed(1)
-variogram_model <- vgm(range = 3.334,            # Construct spherical semi-variogram
-                              nugget = 0.00533,
-                              psill = 0.80429,
-                              model= "Sph")
-S_f_log <- variogramLine(variogram_model,        # Find covariance matrix Sigma_f
+variogram_model <- vgm(range = 3.334,     # Construct spherical semi-variogram
+                       nugget = 0.00533,
+                       psill = 0.80429,
+                       model= "Sph")
+S_f_log <- variogramLine(variogram_model, # Find covariance matrix Sigma_f
                          dist_vector = sp::spDists(matrix(s_axis),
                                                  matrix(s_axis)),
                           covariance = TRUE)
@@ -351,8 +358,8 @@ st_grid <- st_grid %>%                           # Append Y_f to data frame
           left_join(data.frame(s=s_axis,
                                Yf = Yf_sim))
 
-if(misspecification)  {                           # If we are assuming misspecification
-    S_f_log <- diag(diag(S_f_log))                # We over-write Sigma_f to be diagonal
+if(misspecification)  {               # If we are assuming misspecification
+    S_f_log <- diag(diag(S_f_log))    # We over-write Sigma_f to be diagonal
 }
 @
 
@@ -405,7 +412,7 @@ s_obs <- s_obs %>%
 Qobs <- sigma_eps_true^(-2) * .symDiagonal(nrow(s_obs))
 @
 
-To add the discrepancy, we first compuate the spatio-temporal covariance matrix at the observation (space-time) locations using the \texttt{corr\_zeta\_fn} function in the \texttt{atminv} package, find its Cholesky decomposition and then use it to simulate the discrepancy at the required locations. For when we have 2000 observations (\texttt{model = `full\_big'}) we find the covariance matrix at every space-time grid location and use assign the discrepancy to the observations at the grid level. The variable \texttt{C\_m} below is an $m \times m$ identity matrix that will be used later on in the program:
+To add the discrepancy, we first compuate the spatio-temporal covariance matrix at the observation (space-time) locations using the \texttt{corr\_zeta\_fn} function in the \texttt{atminv} package, find its Cholesky decomposition and then use it to simulate the discrepancy at the required locations. For when we have 2000 observations (\texttt{model = `full\_big'}) we find the covariance matrix at every space-time grid location and use assign the discrepancy to the observations at the grid level. The variable \texttt{C\_m} is a matrix that maps the location of the mole fraction observations to the mole fraction prediction grid. Note that for the `full' model this is just the $m \times m$ since with this model we are choosing not predicting the mole fraction in every grid cell:
 
 <<>>=
 ## Now add the discrepancy
@@ -727,212 +734,280 @@ if(F) {
 }
 @
 
-\section{Inference}
+\section{EM algorithm}
 
-In this section we show the code for carrying inference on the bivariate field $(\Yvec_f,\Yvec_m)'$. We first compute the mean flux density 
+In this section we show the code for carrying inference on the bivariate field $(\Yvec_f,\Yvec_m)'$. We first compute the mean flux density, which we will then also use as the initial value for the conditional expectation of $\Yvec_f$ in the gradient descent:
 
-<<>>=
+
+<<mu-f>>=
 mu_f <- matrix(exp(mu_f_log + 0.5*diag(S_f_log)))
-print(mu_f[1])
-# mu_m <- as.matrix(B %*% mu_f)
-# mu <- rbind(mu_f,mu_m)
-# S_f <- exp(S_f_log[1,1]) *(exp(S_f_log) - 1)
-# S_fm <- S_f %*% t(B)
-# S_mf <- B %*% S_f
 @
 
+We then set the settings for the Laplace approximation. These vary accoring to the model being used. For the model `full', we alter the matrices so that the validation point is excluded. :
 
-<<>>=
+<<EM-settings>>=
 ###-----------------------------------------------------
 ### Laplace method -- use with caution because of mode close to zero
 ###-----------------------------------------------------
+n_EM <- 100
+
 if(model == "full") {
-  n_EM <- 100
-  s_mol = s_obs$s[1:m_obs]
-  Y_init = c(mu_f,s_obs$z)
-  theta_init = c(1000,0.2,0.2)
+  s_mol = s_obs$s[1:m_obs]         # prediction locs for mol fraction
+  Y_init = c(mu_f,s_obs$z)         # initial expectation value for Y
+  theta_init = c(1000,0.2,0.2)     # initial parameter vector
+                                   # where theta = [sigma_zeta^2, theta_t, theat_s]
+  
+  # Keep station out for validation
+  rm_idx <- seq(6,nrow(C_m),by=6) # index to be removed
+  s_obs_old <- s_obs              # save old observation location data frame
+  s_obs <- s_obs[-rm_idx,]        # new observation data frame
+  C_m <- C_m[-rm_idx,]            # new incidence matrix
+  Qobs <- Qobs[-rm_idx,-rm_idx]   # new (observation) precision matrix
 
-  # Assume a station has failed
-  rm_idx <- seq(6,nrow(C_m),by=6)
-  s_obs_old <- s_obs
-  s_obs <- s_obs[-rm_idx,]
-  C_m <- C_m[-rm_idx,]
-  Qobs <- Qobs[-rm_idx,-rm_idx]
+} else if (model == "full_big") {
+    s_mol = s_axis                # prediction locs for mol fraction
+    Y_init = c(mu_f,st_grid$Ym)   # initial expectation value for Y
+    theta_init = c(1000,0.2,0.2)  # initial parameter vector
+                                  # where theta = [sigma_zeta^2, theta_t, theat_s]
+}
+@
 
-} else if (model == "diag") {
-  n_EM <- 100
+<<EM-settings2,include=FALSE>>=
+if (model == "diag") {
   s_mol = s_obs$s[1:m_obs]
   Y_init = c(mu_f,s_obs$z)
   theta_init = c(10)
 } else if (model == "sparse") {
-  n_EM <- 100
   s_mol = s_axis
   Y_init = c(mu_f,st_grid$Ym)
   theta_init = c(0.1,0.2)
-} else if (model == "full_big") {
-    n_EM <- 100
-    s_mol = s_axis
-    Y_init = c(mu_f,st_grid$Ym)
-    theta_init = c(1000,0.2,0.2)
 }
 @
 
-<<>>=
-EM_alg <- EM(s_obs = s_obs,
-        C_m = C_m,
-        Qobs = Qobs,
-        B = B,
-        t_mol = t_axis,
-        s_mol = matrix(s_mol),
-        S_f_log = S_f_log,
-        mu_f_log = mu_f_log,
-        Yf_thresh = 1e-4,
-        Y_init =  Y_init,
-        theta_init = theta_init,
-        ind = which(!(colSums(B) == 0)),
-        n_EM = n_EM,
-        model = model)
+We are now ready to call the main function of the \texttt{EM\_alg} package, which returns a function that can be iterated. The inputs to this function are given in-line:
+
+
+<<EM-setup>>=
+EM_alg <- EM(s_obs = s_obs,                  # observation data frame
+        C_m = C_m,                           # incidence matrix
+        Qobs = Qobs,                         # observation precision matrix
+        B = B,                               # SRR matrix
+        t_mol = t_axis,                      # time prediction locs
+        s_mol = matrix(s_mol),               # spatial prediction locs
+        S_f_log = S_f_log,                   # cov. matrix of log(Yf)
+        mu_f_log = mu_f_log,                 # expectation of log(Yf)
+        Yf_thresh = 1e-4,                    # drop nodes with Yf < 1e-4
+        Y_init =  Y_init,                    # initialise Yf
+        theta_init = theta_init,             # initialise theta
+        ind = which(!(colSums(B) == 0)),     # only consider indices with SRR>0
+        n_EM = n_EM,                         # number of EM iterations
+        model = model)                       # model we are using
 @
 
+To iterate the E- and M-steps we simply put the returned function in a loop, and indicate the maximum numer of gradient descents to carry out in the E- and M- steps. In this case we are going to limit the number of M-steps to 50. We also allow for a variable \texttt{fine\_tune\_E} that indicates on which iteration to carry out a second gradient descent at a higher convergence tolerance. This is particularly useful when the Hessian computed at `convergence' is not positive definite due to the tolerance used. 
 
-<<include=FALSE,eval=FALSE>>=
-breakme
-readline("Press enter to run EM algorithm")
+<<EM,cache=TRUE,results="hide">>=
 for(i in 1:(n_EM-2)) {
   X <- EM_alg(max_E_it = 1e6,
               max_M_it = 50,
               fine_tune_E = (i==0))
 }
-#theta = [sigma_zeta^2, theta_t, theat_s]
+@
 
-### Now use HMC sampler with fixed paramaters
+\section{HMC sampler}
 
+In this section we show the code for the HMC sampler, that fixes the parameters found using the EM algorithm above. We first compute the covariance matrix:
 
-### MARGINAL STATE
+<<cov-compute>>=
 if(model == "full") {
   corr_zeta <- corr_zeta_fn(c(s_obs$s[1:(m_obs-1)],new_obs),t_axis,X$theta[2,n_EM],X$theta[3,n_EM])
   S_zeta <- X$theta[1,n_EM] * corr_zeta
   Q_zeta <- chol2inv(chol(S_zeta))
+}
+@
 
-} else if (model == "diag") {
+<<deprecated-cov-compute,include=FALSE,eval=FALSE>>=
+if (model == "diag") {
   S_zeta <- X$theta[1,n_EM] * .symDiagonal(nrow(s_obs))
-
+  Q_zeta <- chol2inv(chol(S_zeta))
 } else if (model == "sparse") {
   stop("Didn't sample for sparse yet")
 }
+@
 
-lap2 <- Yf_marg_approx_fns(s = s_obs,
-                           C_m = C_m,
-                           Qobs = Qobs,
-                           B = B,
-                           S_zeta = S_zeta, #sigma_zeta_true^2 * diag(rep(1,nrow(s_obs)))
-                           mu_f_log = mu_f_log,
-                           S_f_log = S_f_log,
-                           ind=X$ind)
+Now we formulate the equations required for the log-likelihood and the gradient of the log-likelihood of $\Yvec_f$. These are provided in the helper function \texttt{Yf\_marg\_approx\_fns} and its arguments are explained in-line.
 
+<<>>=
+lap2 <- Yf_marg_approx_fns(s = s_obs,            # obs. locations
+                           C_m = C_m,            # incidence matrix
+                           Qobs = Qobs,          # obs. precision matrix
+                           B = B,                # SRR matrix
+                           S_zeta = S_zeta,      # Sigma_zeta
+                           mu_f_log = mu_f_log,  # expectation of log(Y_f)
+                           S_f_log = S_f_log,    # covariance of log(Y_f)
+                           ind=X$ind)            # only consider indices with SRR>0
+@
 
-###-----------------------------------------------------
-### HMC Sampler
-###-----------------------------------------------------
+Next, we set some parameters for the sampler. We set the number of steps per sample $L = 10$, the number of samples $N = 10000$, and the step-size $\Delta \in [0.066,0.068]$ (below denoted as `eps\_gen'). Other variables are defined in-line:
 
-readline("Press enter to run HMC sampler")
-if(1) {
-  # M <- diag(rep(0.3, length(X$ind)))
-  # M <- chol2inv(chol(gr2[1:length(ind),1:length(ind)])) ## WARNING: Laplace is horrible where there are no observations, observations too tight
-  #M <- solve(diag(diag(gr2[1:length(ind),1:length(ind)])))
-  M <- diag(1/(X$lap_approx$Yf^2))
-  if(model == "full"){
-    #eps_gen <- function() runif(n=1,min = 0.035, max = 0.037)
-    eps_gen <- function() runif(n=1,min = 0.066, max = 0.068)
-    L <- 10L
-  } else if (model =="diag") {
-    eps_gen <- function() runif(n=1,min = 0.0065, max = 0.0067)
-    L <- 10L
-  }
-  #eps_gen <- function() runif(n=1,min = 0.001, max = 0.002)
+<<HMC-setup>>=
+M <- diag(1/(X$lap_approx$Yf^2)) # scaling matrix: puts variables on same scale
 
-  ### GOOD SETTINGS L = 100, eps = 0.03--0.032
-  sampler <- hmc_sampler(U = lap2$logf,dUdq = lap2$gr_logf,
-                         M = M,
-                         eps_gen = eps_gen,
-                         L = L,
-                         lower = rep(0,length(X$ind)))
-  N <- 10000
-  q <- matrix(0,nrow(M),N)
-  qsamp <- X$lap_approx$Yf
-  #   qsamp <- rep(1,ns)
-  #   qsamp[ind] <- mode[1:length(ind)]
-  dither <- 1
-  i <- count <- 1
-
-  while(i < N) {
-      qsamp <- sampler(q = qsamp)
-
-
-      if(count  == dither) {
-          q[,i] <- qsamp
-          count = 1
-          i <- i + 1
-          print(paste0("Sample: ",i," Acceptance rate: ",(nrow(unique(t(q)))-1)/i))
-      } else {
-          count <- count + 1
-      }
-  }
-
-
+if(model == "full"){             # Function for generating Delta
+  eps_gen <- function() 
+    runif(n=1,
+          min = 0.066, 
+          max = 0.068)
+} else if (model =="diag") {
+  eps_gen <- function() 
+    runif(n=1,
+          min = 0.0065, 
+          max = 0.0067)
 }
+L <- 10L                   # step-size
+N <- 10000                 # number of samples
+q <- matrix(0,nrow(M),N)   # matrix for storing samples
+qsamp <- X$lap_approx$Yf   # first sample
+dither <- i <- count <- 1  # no dithering, initialise counts
+@
 
+
+The sampler is set up using the function \texttt{sampler} in the \texttt{hmc} package. We set a lower limit of 0; no samples less or equal to zero are allowed:
+
+<<HMC-init>>=
+sampler <- hmc_sampler(U = lap2$logf,                 # log-likelihood
+                       dUdq = lap2$gr_logf,           # gr. of log-likelihood 
+                       M = M,                         # scaling matrix
+                       eps_gen = eps_gen,             # step-size generator
+                       L = L,                         # number of steps
+                       lower = rep(0,length(X$ind)))  # lower limits
+@
+
+We now run the HMC sampler by repeatedly iterating through it. We also can monitor the acceptance rate. For conciseness the output below is not produced. We then calculate the acceptance rate again after the HMC is run.
+
+<<HMC-run,results="hide",cache=TRUE>>=
+while(i < N) {
+  qsamp <- sampler(q = qsamp)
+  
+  if(count  == dither) {
+    q[,i] <- qsamp
+    count = 1
+    i <- i + 1
+    print(paste0("Sample: ",i," Acceptance rate: ",(nrow(unique(t(q)))-1)/i))
+  } else {
+    count <- count + 1
+  }
+}
+@
+
+
+<<HMC-acceptance>>=
+print(paste0("Sample: ",i," Acceptance rate: ",(nrow(unique(t(q)))-1)/i))
+@
+
+\section{Results}
+
+In this section we show the code used to generate the results. First, we put the samples into a format we can work with (the variable `Q2') and then produce a box pot of the samples of the flux field at each of the prediction locations:
+
+<<flux-plot,include=FALSE,eval=FALSE>>=
  Q <- as.data.frame(t(q[1:length(X$ind),-c(1:1000,i)])) %>%
-# Q <- as.data.frame(t(q[1:length(X$ind),1:(i-1)])) %>%
-# Q <- as.data.frame(t(q[,-c(1:1000,i)])) %>%
   tidyr::gather(t,z) %>%
   separate(t, into=c("V","s"),sep="V") %>%
   select(-V) %>%
   mutate(s = s_axis[as.numeric(s)])
 
-Q2 <- Q %>% #rbind(Q,data.frame(s = s_axis[setdiff(1:ns,X$ind)], z = 0)) %>%
+Q2 <- Q %>%
       mutate(s = as.factor(s))
-g <- LinePlotTheme() + geom_boxplot(data=Q2,aes(x=s,y=z))  +
-  #scale_x_discrete(breaks = s_axis[seq(1,length(s_axis),length=10)]) +
+g <- LinePlotTheme() + 
+  geom_boxplot(data=Q2,aes(x=s,y=z))  +
   scale_x_discrete(breaks = s_axis[seq(1,length(s_axis),length=7)]) +
-  #geom_point(data=subset(st_grid, s < 4.4),aes(x=as.factor(s),y = Yf),colour='red',size=3) +
-  geom_point(data=subset(st_grid, s < 5),aes(x=as.factor(s),y = Yf),colour='black',size=3,shape=4) +
-  geom_segment(data=s_obs,aes(x=as.factor(s_obs$s), xend=as.factor(s_obs$s), y = 0, yend = 50),
+  geom_point(data=subset(st_grid, s < 5),
+             aes(x=as.factor(s),y = Yf),
+             colour='black',size=3,shape=4) +
+  geom_segment(data=s_obs,aes(x=as.factor(s_obs$s), 
+                              xend=as.factor(s_obs$s), 
+                              y = 0, yend = 50),
                  arrow=arrow(length=unit(0.1,"cm"))) +
-  geom_line(data=data.frame(s=rep(3.9,2),z=c(-200,1300)),aes(as.factor(s),z),linetype="dashed") +
-  geom_line(data=data.frame(s=rep(-5.3,2),z=c(-200,1300)),aes(as.factor(s),z),linetype="dashed") +
-#  geom_point(data=subset(s_obs,t==1),aes(x=as.factor(s),y = 0),colour='blue',size=3) +
-  coord_fixed(ratio = 0.03, ylim=c(0,1050)) + ylab("Yf (g/s/degree)") + xlab("s (degrees)")
-g
-ggsave("../Sim1_samples.png",plot = g,width=10)
+  geom_line(data=data.frame(s=rep(3.9,2),
+                            z=c(-200,1300)),
+            aes(as.factor(s),z),linetype="dashed") +
+  geom_line(data=data.frame(s=rep(-5.3,2),
+                            z=c(-200,1300)),
+            aes(as.factor(s),z),linetype="dashed") +
+  coord_fixed(ratio = 0.03, ylim=c(0,1050)) + 
+  ylab("Yf (g/s/degree)") + xlab("s (degrees)")
+if(!misspecification) 
+  ggsave("../../Sim1_samples.png",plot = g,width=10)
+@
 
 
+\begin{figure}
+\begin{center}
+<<HMC-plot,fig.height=6,fig.width=5>>=
+print(g)
+@
+\end{center}
+\caption{Samples from the posterior distribution of the lognormal flux field obtained using Hamiltonian Monte Carlo (HMC). The boxes denote the interquartile range, the whiskers extend to the last values that are within 1.5 times the interquartile range from the quartiles, and the dots show the samples that lie beyond the end of the whiskers. The crosses denote the true (simulated) fluxes, and the arrows denote the locations of the measurements. The vertical dashed lines show the spatial locations analysed in Figure \ref{fig:Lap_vs_mcmc}. Since the observed mole fractions are insensitive to flux at $\{s : s > 4.3\}$, these locations were excluded from the model.}
+\label{fig:Slice}
+\end{figure}
+
+We now compare the Laplace approximation of the flux field to the distribution given by HMC. We first create a function \texttt{comp\_density} that plots the HMC samples and the Laplace approximation for any arbitrary point, and then pass on two spatial locations to it for plotting:
+
+<<include=FALSE,eval=FALSE>>=
 comp_density <- function(j,xu,xl=0,yu=0.01) {
   x <- seq(xl,xu,by=1)
-  hist(q[j,1:(N-1)],xlab=c("flux (g/s/degree)"),ylab="[Yf | Zm]",main="",freq=F,xlim=c(xl,xu),ylim=c(0,yu))
-  lines(x,dnorm(x,mean=X$lap_approx$Yf[j],sd=sqrt(X$lap_approx$S_ff[j,j])),lty=2)
+  hist(q[j,1:(N-1)],xlab=c("flux (g/s/degree)"),
+       ylab="[Yf | Zm]",
+       main="",
+       freq=F,
+       xlim=c(xl,xu),
+       ylim=c(0,yu))
+  lines(x,dnorm(x,mean=X$lap_approx$Yf[j],
+                sd=sqrt(X$lap_approx$S_ff[j,j])),
+        lty=2)
 }
 
-png("../density_sim1.png", width=4, height=4, units="in", res=300)
-comp_density(70,800,-200,yu=0.005); dev.off()
-png("../density_sim10.png", width=4, height=4, units="in", res=300)
-comp_density(24,400,50,yu=0.014); dev.off()
+if(!misspecification) {
+  png("../../density_sim1.png", width=4, height=4, units="in", res=300)
+  comp_density(70,800,-200,yu=0.005); dev.off()
+  png("../../density_sim10.png", width=4, height=4, units="in", res=300)
+  comp_density(24,400,50,yu=0.014); dev.off()
+}
+@
 
 
+\begin{figure}[!ht]
+\begin{center}
+<<fig.height=4,fig.width=7>>=
+par(mfrow=c(1,2))
+comp_density(70,800,-200,yu=0.005);
+comp_density(24,400,50,yu=0.014);
+@
+\caption{Laplace approximation (dashed line) and a histogram of the empirical posterior distribution from the MCMC samples for the flux at $s = 3.9^\circ$ (left panel) and $s = -5.3^\circ$ (right panel).} \label{fig:Lap_vs_mcmc}
+\end{center}
+\end{figure}
+
+Having obtained the flux field samples, we now used the collapsing property of the Gibbs sampler to obtain samples for the mole-fraction field by simply running the samples through the forward model:
+
+<<mf-samps>>=
 ## Now get the mole fraction samples
-mf_samp <- matrix(0,nrow(B),N)
-mu_post <- matrix(0,nrow(B),N)
-Q_post <- t(C_m) %*% Qobs %*% C_m + Q_zeta
-S_post <- chol2inv(chol(Q_post))
-L_S_post <- t(chol(S_post))
-SQB <- S_post %*% Q_zeta %*% B[,X$ind]
-StCQoz <- S_post %*% t(C_m) %*% Qobs %*% s_obs$z
+mf_samp <- matrix(0,nrow(B),N)                # initialise mole-fraction samples array
+mu_post <- matrix(0,nrow(B),N)                # initialise mole-fraction samples array
+Q_post <- t(C_m) %*% Qobs %*% C_m + Q_zeta    # conditional precision of Ym
+S_post <- chol2inv(chol(Q_post))              # conditional covariance of Ym
+L_S_post <- t(chol(S_post))                   # Cholesky decomposition of above
+SQB <- S_post %*% Q_zeta %*% B[,X$ind]        # weight given to flux sample
+StCQoz <- S_post %*% t(C_m) %*% Qobs %*% s_obs$z # influence of observation
 for (i in 1:N){
- mu_post[,i] <- as.vector(SQB %*% q[,i] + StCQoz)
- mf_samp[,i] <- as.vector(mu_post[,i] + L_S_post %*% rnorm(nrow(B)))
+ mu_post[,i] <- as.vector(SQB %*% q[,i] +     # conditional mean
+                            StCQoz)           
+ mf_samp[,i] <- as.vector(mu_post[,i] +       # generate sample
+                            L_S_post %*% rnorm(nrow(B)))
 }
+@
 
-
+Now that we have our mole-fraction samples we can plot the credibility intervals at the unobserved location. We do this by taking the 6th row (recall that $m = 6$) of the mole-fraction samples matrix, putting the rows into a data frame and plotting the result.
+<<mf-validation>>=
 stat1 <-  seq(6,600,by=6)
 mu <- apply(mf_samp[stat1,-c(1:1000,i)],1,median)
 uq <- apply(mf_samp[stat1,-c(1:1000,i)],1,quantile,0.75)
@@ -941,42 +1016,39 @@ uuq <- apply(mf_samp[stat1,-c(1:1000,i)],1,quantile,0.95)
 llq <- apply(mf_samp[stat1,-c(1:1000,i)],1,quantile,0.05)
 df <- data.frame(mean = mu, uq=uq,lq=lq,uuq=uuq,llq=llq,t=1:length(mu))
 
-g <- LinePlotTheme() + geom_ribbon(data=df,aes(x=t,ymax=uq,ymin=lq),alpha=0.6) +
+g <- LinePlotTheme() + 
+  geom_ribbon(data=df,aes(x=t,ymax=uq,ymin=lq),alpha=0.6) +
   geom_ribbon(data=df,aes(x=t,ymax=uuq,ymin=llq),alpha=0.3) +
-  geom_point(data=subset(s_obs_old,s==new_obs),aes(x=t,y = z),colour='black',size=3,shape=4)+
+  geom_point(data=subset(s_obs_old,s==new_obs),
+             aes(x=t,y = z),colour='black',size=3,shape=4)+
     ylab("Ym (ppb)") + xlab("t (2 h steps)")
-ggsave("../MF_samples.png",plot = g,width=10,height=3)
 
-# MF <- as.data.frame(t(mf_samp[rm_idx,-c(1:1000,i)])) %>%
-#     # Q <- as.data.frame(t(q[1:length(X$ind),1:(i-1)])) %>%
-#     # Q <- as.data.frame(t(q[,-c(1:1000,i)])) %>%
-#     tidyr::gather(s,z) %>%
-#     separate(s, into=c("V","t"),sep="V") %>%
-#     select(-V) %>%
-#     mutate(t = t_axis[as.numeric(t)])
-#
-# MF2 <- MF %>% #rbind(Q,data.frame(s = s_axis[setdiff(1:ns,X$ind)], z = 0)) %>%
-#     mutate(t = as.factor(t))
-# g <- LinePlotTheme() + geom_boxplot(data=MF2,aes(x=t,y=z))  +
-#     scale_x_discrete(breaks = t_axis[seq(1,length(t_axis),length=7)]) +
-#     #geom_point(data=subset(st_grid, s < 4.4),aes(x=as.factor(s),y = Yf),colour='red',size=3) +
-#     geom_point(data=subset(st_grid, s == new_obs),aes(x=as.factor(t),y = Ym),colour='black',size=3,shape=4)+
-#     coord_fixed(ratio = 0.025, ylim=c(-200,1600)) + ylab("Yf")
-# g
-# ggsave("../../MVCF/Chemometrics/MF_samples.png",plot = g,width=10)
+if(!misspecification) 
+  ggsave("../../MF_samples.png",plot = g,width=10,height=3)
+@
 
+\begin{figure}[!ht]
+\begin{center}
+<<fig.height=4,fig.width=7>>=
+print(g)
+@
+\caption{Distributions of mole fraction at $s = 0.3^\circ$ and $t \in \mathcal{T}$, following Gibbs sampling. The dark and light shadings denote the interquartile and the 5--95 percentile ranges, respectively. The crosses denote the true (simulated) mole fractions.} \label{fig:MF}
+\end{center}
+\end{figure}
+
+Finally, we calculate the statistics $S_{1,f}$, $S_{2,f}$ and $S_{1,m}^{0.3}$ as defined in the paper:
+
+<<stats>>=
 # Flux errors
 residual <-(st_grid$Yf[1:75] - apply(q,1,mean))
 post_unc <- apply(q,1,var)
 print(paste0("S1f = ", sqrt(mean(residual^2))))
 print(paste0("S2f = ", sqrt(mean(residual^2) /mean(post_unc))))
-print(paste0("C1 = ", mean(residual) / (1/length(post_unc) * sqrt(sum(post_unc)))))
 
 # MF errors
 residual <- (apply(mf_samp[rm_idx,],1,mean) - subset(st_grid,s == new_obs)$Ym)
 post_unc <- apply(mf_samp[rm_idx,],1,var)
 print(paste0("S1m = ", sqrt(mean(residual^2))))
-print(paste0("S2m = ", sqrt(mean(residual^2) /mean(post_unc))))
 @
 
 
