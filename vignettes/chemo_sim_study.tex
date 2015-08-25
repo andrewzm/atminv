@@ -253,11 +253,6 @@ This only needs to be done once. Now that we have the development packages insta
 \hlkwd{library}\hlstd{(gstat)}
 \hlkwd{library}\hlstd{(hmc)}
 \hlkwd{library}\hlstd{(atminv)}
-\hlcom{# load_all("../../../pkgs//hmc")}
-\hlcom{#library(devtools)}
-\hlcom{#load_all("..")}
-\hlcom{#library(scales) # for format_format}
-\hlcom{#load_all("../../../../../CurrentProjects/PostDoc Bristol/R Code/pkg/MVST")}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
@@ -270,6 +265,8 @@ We will now set up our simulation. Here we will only be concerned with the model
 \hlcom{###------------------}
 \hlcom{### Parameters}
 \hlcom{###------------------}
+\hlstd{load_results}  \hlkwb{<-} \hlnum{1}  \hlcom{# For quick vignette build}
+\hlstd{cache_results} \hlkwb{<-} \hlnum{0} \hlcom{# Development only}
 \hlstd{model} \hlkwb{=} \hlstr{"full"} \hlcom{## Either sparse or full or full_big or diag}
 \hlstd{misspecification} \hlkwb{=} \hlnum{0}
 \hlcom{#set.seed(25) # 25 , T = 400 or 15/200}
@@ -413,11 +410,11 @@ Now that we have the parameters in place, we can simulate our dataset. We first 
 \hlcom{### Lognormal flux field}
 \hlcom{###------------------}
 \hlkwd{set.seed}\hlstd{(}\hlnum{1}\hlstd{)}
-\hlstd{variogram_model} \hlkwb{<-} \hlkwd{vgm}\hlstd{(}\hlkwc{range} \hlstd{=} \hlnum{3.334}\hlstd{,}            \hlcom{# Construct spherical semi-variogram}
-                              \hlkwc{nugget} \hlstd{=} \hlnum{0.00533}\hlstd{,}
-                              \hlkwc{psill} \hlstd{=} \hlnum{0.80429}\hlstd{,}
-                              \hlkwc{model}\hlstd{=} \hlstr{"Sph"}\hlstd{)}
-\hlstd{S_f_log} \hlkwb{<-} \hlkwd{variogramLine}\hlstd{(variogram_model,}        \hlcom{# Find covariance matrix Sigma_f}
+\hlstd{variogram_model} \hlkwb{<-} \hlkwd{vgm}\hlstd{(}\hlkwc{range} \hlstd{=} \hlnum{3.334}\hlstd{,}     \hlcom{# Construct spherical semi-variogram}
+                       \hlkwc{nugget} \hlstd{=} \hlnum{0.00533}\hlstd{,}
+                       \hlkwc{psill} \hlstd{=} \hlnum{0.80429}\hlstd{,}
+                       \hlkwc{model}\hlstd{=} \hlstr{"Sph"}\hlstd{)}
+\hlstd{S_f_log} \hlkwb{<-} \hlkwd{variogramLine}\hlstd{(variogram_model,} \hlcom{# Find covariance matrix Sigma_f}
                          \hlkwc{dist_vector} \hlstd{= sp}\hlopt{::}\hlkwd{spDists}\hlstd{(}\hlkwd{matrix}\hlstd{(s_axis),}
                                                  \hlkwd{matrix}\hlstd{(s_axis)),}
                           \hlkwc{covariance} \hlstd{=} \hlnum{TRUE}\hlstd{)}
@@ -431,8 +428,8 @@ Now that we have the parameters in place, we can simulate our dataset. We first 
 
 
 {\ttfamily\noindent\itshape\color{messagecolor}{\#\# Joining by: "{}s"{}}}\begin{alltt}
-\hlkwa{if}\hlstd{(misspecification)  \{}                           \hlcom{# If we are assuming misspecification}
-    \hlstd{S_f_log} \hlkwb{<-} \hlkwd{diag}\hlstd{(}\hlkwd{diag}\hlstd{(S_f_log))}                \hlcom{# We over-write Sigma_f to be diagonal}
+\hlkwa{if}\hlstd{(misspecification)  \{}               \hlcom{# If we are assuming misspecification}
+    \hlstd{S_f_log} \hlkwb{<-} \hlkwd{diag}\hlstd{(}\hlkwd{diag}\hlstd{(S_f_log))}    \hlcom{# We over-write Sigma_f to be diagonal}
 \hlstd{\}}
 \end{alltt}
 \end{kframe}
@@ -763,14 +760,32 @@ To iterate the E- and M-steps we simply put the returned function in a loop, and
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlkwa{for}\hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{(n_EM}\hlopt{-}\hlnum{2}\hlstd{)) \{}
-  \hlstd{X} \hlkwb{<-} \hlkwd{EM_alg}\hlstd{(}\hlkwc{max_E_it} \hlstd{=} \hlnum{1e6}\hlstd{,}
-              \hlkwc{max_M_it} \hlstd{=} \hlnum{50}\hlstd{,}
-              \hlkwc{fine_tune_E} \hlstd{= (i}\hlopt{==}\hlnum{0}\hlstd{))}
+\hlstd{filename} \hlkwb{<-} \hlkwd{paste0}\hlstd{(model,}\hlstr{"_misspec_"}\hlstd{,misspecification,}\hlstr{".rda"}\hlstd{)}
+\hlkwa{if}\hlstd{(load_results) \{}
+  \hlkwd{load}\hlstd{(}\hlkwd{system.file}\hlstd{(}\hlstr{"extdata"}\hlstd{,filename,} \hlkwc{package} \hlstd{=} \hlstr{"atminv"}\hlstd{))}
+\hlstd{\}} \hlkwa{else} \hlstd{\{}
+  \hlkwa{for}\hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{(n_EM}\hlopt{-}\hlnum{2}\hlstd{)) \{}
+    \hlstd{X} \hlkwb{<-} \hlkwd{EM_alg}\hlstd{(}\hlkwc{max_E_it} \hlstd{=} \hlnum{1e6}\hlstd{,}
+                \hlkwc{max_M_it} \hlstd{=} \hlnum{50}\hlstd{,}
+                \hlkwc{fine_tune_E} \hlstd{= (i}\hlopt{==}\hlnum{0}\hlstd{))}
+  \hlstd{\}}
 \hlstd{\}}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
+
+The final parameter estimates are given by
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{X}\hlopt{$}\hlstd{theta[,n_EM}\hlopt{-}\hlnum{1}\hlstd{]}
+\end{alltt}
+\begin{verbatim}
+## [1] 1964.9329277    0.7135804    0.7721958
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
 
 \section{HMC sampler}
 
@@ -826,10 +841,13 @@ Next, we set some parameters for the sampler. We set the number of steps per sam
           \hlkwc{max} \hlstd{=} \hlnum{0.0067}\hlstd{)}
 \hlstd{\}}
 \hlstd{L} \hlkwb{<-} \hlnum{10L}                   \hlcom{# step-size}
-\hlstd{N} \hlkwb{<-} \hlnum{3}                 \hlcom{# number of samples}
+\hlstd{N} \hlkwb{<-} \hlnum{100}                 \hlcom{# number of samples}
 \hlstd{q} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlnum{0}\hlstd{,}\hlkwd{nrow}\hlstd{(M),N)}   \hlcom{# matrix for storing samples}
 \hlstd{qsamp} \hlkwb{<-} \hlstd{X}\hlopt{$}\hlstd{lap_approx}\hlopt{$}\hlstd{Yf}   \hlcom{# first sample}
 \hlstd{dither} \hlkwb{<-} \hlstd{i} \hlkwb{<-} \hlstd{count} \hlkwb{<-} \hlnum{1}  \hlcom{# no dithering, initialise counts}
+
+\hlcom{# if(!(N==10000) & cache_results) }
+\hlcom{#   stop("Cannot cache unless N =10000")}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
@@ -855,18 +873,22 @@ We now run the HMC sampler by repeatedly iterating through it. We also can monit
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlkwa{while}\hlstd{(i} \hlopt{<} \hlstd{N) \{}
-  \hlstd{qsamp} \hlkwb{<-} \hlkwd{sampler}\hlstd{(}\hlkwc{q} \hlstd{= qsamp)}
+\hlkwa{if}\hlstd{(}\hlopt{!}\hlstd{load_results) \{}
+  \hlkwa{while}\hlstd{(i} \hlopt{<} \hlstd{N) \{}
+    \hlstd{qsamp} \hlkwb{<-} \hlkwd{sampler}\hlstd{(}\hlkwc{q} \hlstd{= qsamp)}
 
-  \hlkwa{if}\hlstd{(count}  \hlopt{==} \hlstd{dither) \{}
-    \hlstd{q[,i]} \hlkwb{<-} \hlstd{qsamp}
-    \hlstd{count} \hlkwb{=} \hlnum{1}
-    \hlstd{i} \hlkwb{<-} \hlstd{i} \hlopt{+} \hlnum{1}
-    \hlkwd{print}\hlstd{(}\hlkwd{paste0}\hlstd{(}\hlstr{"Sample: "}\hlstd{,i,}\hlstr{" Acceptance rate: "}\hlstd{,(}\hlkwd{nrow}\hlstd{(}\hlkwd{unique}\hlstd{(}\hlkwd{t}\hlstd{(q)))}\hlopt{-}\hlnum{1}\hlstd{)}\hlopt{/}\hlstd{i))}
-  \hlstd{\}} \hlkwa{else} \hlstd{\{}
-    \hlstd{count} \hlkwb{<-} \hlstd{count} \hlopt{+} \hlnum{1}
+    \hlkwa{if}\hlstd{(count}  \hlopt{==} \hlstd{dither) \{}
+      \hlstd{q[,i]} \hlkwb{<-} \hlstd{qsamp}
+      \hlstd{count} \hlkwb{=} \hlnum{1}
+      \hlstd{i} \hlkwb{<-} \hlstd{i} \hlopt{+} \hlnum{1}
+      \hlkwd{print}\hlstd{(}\hlkwd{paste0}\hlstd{(}\hlstr{"Sample: "}\hlstd{,i,}\hlstr{" Acceptance rate: "}\hlstd{,(}\hlkwd{nrow}\hlstd{(}\hlkwd{unique}\hlstd{(}\hlkwd{t}\hlstd{(q)))}\hlopt{-}\hlnum{1}\hlstd{)}\hlopt{/}\hlstd{i))}
+    \hlstd{\}} \hlkwa{else} \hlstd{\{}
+      \hlstd{count} \hlkwb{<-} \hlstd{count} \hlopt{+} \hlnum{1}
+    \hlstd{\}}
   \hlstd{\}}
 \hlstd{\}}
+\hlkwa{if}\hlstd{(cache_results)}
+    \hlkwd{save}\hlstd{(X,q,i,count,}\hlkwc{file}\hlstd{=}\hlkwd{paste0}\hlstd{(}\hlstr{"../inst/extdata/"}\hlstd{,filename))}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
@@ -878,7 +900,7 @@ We now run the HMC sampler by repeatedly iterating through it. We also can monit
 \hlkwd{print}\hlstd{(}\hlkwd{paste0}\hlstd{(}\hlstr{"Sample: "}\hlstd{,i,}\hlstr{" Acceptance rate: "}\hlstd{,(}\hlkwd{nrow}\hlstd{(}\hlkwd{unique}\hlstd{(}\hlkwd{t}\hlstd{(q)))}\hlopt{-}\hlnum{1}\hlstd{)}\hlopt{/}\hlstd{i))}
 \end{alltt}
 \begin{verbatim}
-## [1] "Sample: 5 Acceptance rate: 0.2"
+## [1] "Sample: 1 Acceptance rate: 0"
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -887,19 +909,214 @@ We now run the HMC sampler by repeatedly iterating through it. We also can monit
 
 In this section we show the code used to generate the results. First, we put the samples into a format we can work with (the variable `Q2') and then produce a box pot of the samples of the flux field at each of the prediction locations:
 
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+ \hlstd{Q} \hlkwb{<-} \hlkwd{as.data.frame}\hlstd{(}\hlkwd{t}\hlstd{(q[}\hlnum{1}\hlopt{:}\hlkwd{length}\hlstd{(X}\hlopt{$}\hlstd{ind),}\hlopt{-}\hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlnum{1000}\hlstd{,i)]))} \hlopt{%>%}
+  \hlstd{tidyr}\hlopt{::}\hlkwd{gather}\hlstd{(t,z)} \hlopt{%>%}
+  \hlkwd{separate}\hlstd{(t,} \hlkwc{into}\hlstd{=}\hlkwd{c}\hlstd{(}\hlstr{"V"}\hlstd{,}\hlstr{"s"}\hlstd{),}\hlkwc{sep}\hlstd{=}\hlstr{"V"}\hlstd{)} \hlopt{%>%}
+  \hlkwd{select}\hlstd{(}\hlopt{-}\hlstd{V)} \hlopt{%>%}
+  \hlkwd{mutate}\hlstd{(}\hlkwc{s} \hlstd{= s_axis[}\hlkwd{as.numeric}\hlstd{(s)])}
+\end{alltt}
 
 
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in matrix(unlist(pieces), ncol = n, byrow = TRUE): 'data' must be of a vector type, was 'NULL'}}\begin{alltt}
+\hlstd{Q2} \hlkwb{<-} \hlstd{Q} \hlopt{%>%}
+      \hlkwd{mutate}\hlstd{(}\hlkwc{s} \hlstd{=} \hlkwd{as.factor}\hlstd{(s))}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in eval(expr, envir, enclos): object 'Q' not found}}\begin{alltt}
+\hlstd{g} \hlkwb{<-} \hlkwd{LinePlotTheme}\hlstd{()} \hlopt{+}
+  \hlkwd{geom_boxplot}\hlstd{(}\hlkwc{data}\hlstd{=Q2,}\hlkwd{aes}\hlstd{(}\hlkwc{x}\hlstd{=s,}\hlkwc{y}\hlstd{=z))}  \hlopt{+}
+  \hlkwd{scale_x_discrete}\hlstd{(}\hlkwc{breaks} \hlstd{= s_axis[}\hlkwd{seq}\hlstd{(}\hlnum{1}\hlstd{,}\hlkwd{length}\hlstd{(s_axis),}\hlkwc{length}\hlstd{=}\hlnum{7}\hlstd{)])} \hlopt{+}
+  \hlkwd{geom_point}\hlstd{(}\hlkwc{data}\hlstd{=}\hlkwd{subset}\hlstd{(st_grid, s} \hlopt{<} \hlnum{5}\hlstd{),}
+             \hlkwd{aes}\hlstd{(}\hlkwc{x}\hlstd{=}\hlkwd{as.factor}\hlstd{(s),}\hlkwc{y} \hlstd{= Yf),}
+             \hlkwc{colour}\hlstd{=}\hlstr{'black'}\hlstd{,}\hlkwc{size}\hlstd{=}\hlnum{3}\hlstd{,}\hlkwc{shape}\hlstd{=}\hlnum{4}\hlstd{)} \hlopt{+}
+  \hlkwd{geom_segment}\hlstd{(}\hlkwc{data}\hlstd{=s_obs,}\hlkwd{aes}\hlstd{(}\hlkwc{x}\hlstd{=}\hlkwd{as.factor}\hlstd{(s_obs}\hlopt{$}\hlstd{s),}
+                              \hlkwc{xend}\hlstd{=}\hlkwd{as.factor}\hlstd{(s_obs}\hlopt{$}\hlstd{s),}
+                              \hlkwc{y} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{yend} \hlstd{=} \hlnum{50}\hlstd{),}
+                 \hlkwc{arrow}\hlstd{=}\hlkwd{arrow}\hlstd{(}\hlkwc{length}\hlstd{=}\hlkwd{unit}\hlstd{(}\hlnum{0.1}\hlstd{,}\hlstr{"cm"}\hlstd{)))} \hlopt{+}
+  \hlkwd{geom_line}\hlstd{(}\hlkwc{data}\hlstd{=}\hlkwd{data.frame}\hlstd{(}\hlkwc{s}\hlstd{=}\hlkwd{rep}\hlstd{(}\hlnum{3.9}\hlstd{,}\hlnum{2}\hlstd{),}
+                            \hlkwc{z}\hlstd{=}\hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{200}\hlstd{,}\hlnum{1300}\hlstd{)),}
+            \hlkwd{aes}\hlstd{(}\hlkwd{as.factor}\hlstd{(s),z),}\hlkwc{linetype}\hlstd{=}\hlstr{"dashed"}\hlstd{)} \hlopt{+}
+  \hlkwd{geom_line}\hlstd{(}\hlkwc{data}\hlstd{=}\hlkwd{data.frame}\hlstd{(}\hlkwc{s}\hlstd{=}\hlkwd{rep}\hlstd{(}\hlopt{-}\hlnum{5.3}\hlstd{,}\hlnum{2}\hlstd{),}
+                            \hlkwc{z}\hlstd{=}\hlkwd{c}\hlstd{(}\hlopt{-}\hlnum{200}\hlstd{,}\hlnum{1300}\hlstd{)),}
+            \hlkwd{aes}\hlstd{(}\hlkwd{as.factor}\hlstd{(s),z),}\hlkwc{linetype}\hlstd{=}\hlstr{"dashed"}\hlstd{)} \hlopt{+}
+  \hlkwd{coord_fixed}\hlstd{(}\hlkwc{ratio} \hlstd{=} \hlnum{0.03}\hlstd{,} \hlkwc{ylim}\hlstd{=}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,}\hlnum{1050}\hlstd{))} \hlopt{+}
+  \hlkwd{ylab}\hlstd{(}\hlstr{"Yf (g/s/degree)"}\hlstd{)} \hlopt{+} \hlkwd{xlab}\hlstd{(}\hlstr{"s (degrees)"}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in do.call("{}layer"{}, list(mapping = mapping, data = data, stat = stat, : object 'Q2' not found}}\begin{alltt}
+\hlkwa{if}\hlstd{(}\hlopt{!}\hlstd{misspecification)}
+  \hlkwd{ggsave}\hlstd{(}\hlstr{"../../Sim1_samples.png"}\hlstd{,}\hlkwc{plot} \hlstd{= g,}\hlkwc{width}\hlstd{=}\hlnum{10}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# Saving 10 x 7 in image}}\end{kframe}
+\end{knitrout}
+
+
+\begin{figure}
+\begin{center}
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlkwd{print}\hlstd{(g)}
 \end{alltt}
 \end{kframe}
-\includegraphics[width=\maxwidth]{figure/flux-plot2-1} 
+\includegraphics[width=\maxwidth]{figure/HMC-plot-1} 
 
+\end{knitrout}
+\end{center}
+\caption{Samples from the posterior distribution of the lognormal flux field obtained using Hamiltonian Monte Carlo (HMC). The boxes denote the interquartile range, the whiskers extend to the last values that are within 1.5 times the interquartile range from the quartiles, and the dots show the samples that lie beyond the end of the whiskers. The crosses denote the true (simulated) fluxes, and the arrows denote the locations of the measurements. The vertical dashed lines show the spatial locations analysed in Figure \ref{fig:Lap_vs_mcmc}. Since the observed mole fractions are insensitive to flux at $\{s : s > 4.3\}$, these locations were excluded from the model.}
+\label{fig:Slice}
+\end{figure}
+
+We now compare the Laplace approximation of the flux field to the distribution given by HMC. We first create a function \texttt{comp\_density} that plots the HMC samples and the Laplace approximation for any arbitrary point, and then pass on two spatial locations to it for plotting:
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{comp_density} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{j}\hlstd{,}\hlkwc{xu}\hlstd{,}\hlkwc{xl}\hlstd{=}\hlnum{0}\hlstd{,}\hlkwc{yu}\hlstd{=}\hlnum{0.01}\hlstd{) \{}
+  \hlstd{x} \hlkwb{<-} \hlkwd{seq}\hlstd{(xl,xu,}\hlkwc{by}\hlstd{=}\hlnum{1}\hlstd{)}
+  \hlkwd{hist}\hlstd{(q[j,}\hlnum{1}\hlopt{:}\hlstd{(N}\hlopt{-}\hlnum{1}\hlstd{)],}\hlkwc{xlab}\hlstd{=}\hlkwd{c}\hlstd{(}\hlstr{"flux (g/s/degree)"}\hlstd{),}
+       \hlkwc{ylab}\hlstd{=}\hlstr{"[Yf | Zm]"}\hlstd{,}
+       \hlkwc{main}\hlstd{=}\hlstr{""}\hlstd{,}
+       \hlkwc{freq}\hlstd{=F,}
+       \hlkwc{xlim}\hlstd{=}\hlkwd{c}\hlstd{(xl,xu),}
+       \hlkwc{ylim}\hlstd{=}\hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,yu))}
+  \hlkwd{lines}\hlstd{(x,}\hlkwd{dnorm}\hlstd{(x,}\hlkwc{mean}\hlstd{=X}\hlopt{$}\hlstd{lap_approx}\hlopt{$}\hlstd{Yf[j],}
+                \hlkwc{sd}\hlstd{=}\hlkwd{sqrt}\hlstd{(X}\hlopt{$}\hlstd{lap_approx}\hlopt{$}\hlstd{S_ff[j,j])),}
+        \hlkwc{lty}\hlstd{=}\hlnum{2}\hlstd{)}
+\hlstd{\}}
+
+\hlkwa{if}\hlstd{(}\hlopt{!}\hlstd{misspecification) \{}
+  \hlkwd{png}\hlstd{(}\hlstr{"../../density_sim1.png"}\hlstd{,} \hlkwc{width}\hlstd{=}\hlnum{4}\hlstd{,} \hlkwc{height}\hlstd{=}\hlnum{4}\hlstd{,} \hlkwc{units}\hlstd{=}\hlstr{"in"}\hlstd{,} \hlkwc{res}\hlstd{=}\hlnum{300}\hlstd{)}
+  \hlkwd{comp_density}\hlstd{(}\hlnum{70}\hlstd{,}\hlnum{800}\hlstd{,}\hlopt{-}\hlnum{200}\hlstd{,}\hlkwc{yu}\hlstd{=}\hlnum{0.005}\hlstd{);} \hlkwd{dev.off}\hlstd{()}
+  \hlkwd{png}\hlstd{(}\hlstr{"../../density_sim10.png"}\hlstd{,} \hlkwc{width}\hlstd{=}\hlnum{4}\hlstd{,} \hlkwc{height}\hlstd{=}\hlnum{4}\hlstd{,} \hlkwc{units}\hlstd{=}\hlstr{"in"}\hlstd{,} \hlkwc{res}\hlstd{=}\hlnum{300}\hlstd{)}
+  \hlkwd{comp_density}\hlstd{(}\hlnum{24}\hlstd{,}\hlnum{400}\hlstd{,}\hlnum{50}\hlstd{,}\hlkwc{yu}\hlstd{=}\hlnum{0.014}\hlstd{);} \hlkwd{dev.off}\hlstd{()}
+\hlstd{\}}
+\end{alltt}
+\begin{verbatim}
+## pdf 
+##   2
+\end{verbatim}
+\end{kframe}
 \end{knitrout}
 
 
+\begin{figure}[!ht]
+\begin{center}
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{par}\hlstd{(}\hlkwc{mfrow}\hlstd{=}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,}\hlnum{2}\hlstd{))}
+\hlkwd{comp_density}\hlstd{(}\hlnum{70}\hlstd{,}\hlnum{800}\hlstd{,}\hlopt{-}\hlnum{200}\hlstd{,}\hlkwc{yu}\hlstd{=}\hlnum{0.005}\hlstd{);}
+\hlkwd{comp_density}\hlstd{(}\hlnum{24}\hlstd{,}\hlnum{400}\hlstd{,}\hlnum{50}\hlstd{,}\hlkwc{yu}\hlstd{=}\hlnum{0.014}\hlstd{);}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=\maxwidth]{figure/unnamed-chunk-8-1} 
+
+\end{knitrout}
+\caption{Laplace approximation (dashed line) and a histogram of the empirical posterior distribution from the MCMC samples for the flux at $s = 3.9^\circ$ (left panel) and $s = -5.3^\circ$ (right panel).} \label{fig:Lap_vs_mcmc}
+\end{center}
+\end{figure}
+
+Having obtained the flux field samples, we now used the collapsing property of the Gibbs sampler to obtain samples for the mole-fraction field by simply running the samples through the forward model:
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{## Now get the mole fraction samples}
+\hlstd{mf_samp} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlnum{0}\hlstd{,}\hlkwd{nrow}\hlstd{(B),N)}                \hlcom{# initialise mole-fraction samples array}
+\hlstd{mu_post} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlnum{0}\hlstd{,}\hlkwd{nrow}\hlstd{(B),N)}                \hlcom{# initialise mole-fraction samples array}
+\hlstd{Q_post} \hlkwb{<-} \hlkwd{t}\hlstd{(C_m)} \hlopt{%*%} \hlstd{Qobs} \hlopt{%*%} \hlstd{C_m} \hlopt{+} \hlstd{Q_zeta}    \hlcom{# conditional precision of Ym}
+\hlstd{S_post} \hlkwb{<-} \hlkwd{chol2inv}\hlstd{(}\hlkwd{chol}\hlstd{(Q_post))}              \hlcom{# conditional covariance of Ym}
+\hlstd{L_S_post} \hlkwb{<-} \hlkwd{t}\hlstd{(}\hlkwd{chol}\hlstd{(S_post))}                   \hlcom{# Cholesky decomposition of above}
+\hlstd{SQB} \hlkwb{<-} \hlstd{S_post} \hlopt{%*%} \hlstd{Q_zeta} \hlopt{%*%} \hlstd{B[,X}\hlopt{$}\hlstd{ind]}        \hlcom{# weight given to flux sample}
+\hlstd{StCQoz} \hlkwb{<-} \hlstd{S_post} \hlopt{%*%} \hlkwd{t}\hlstd{(C_m)} \hlopt{%*%} \hlstd{Qobs} \hlopt{%*%} \hlstd{s_obs}\hlopt{$}\hlstd{z} \hlcom{# influence of observation}
+\hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{N)\{}
+ \hlstd{mu_post[,i]} \hlkwb{<-} \hlkwd{as.vector}\hlstd{(SQB} \hlopt{%*%} \hlstd{q[,i]} \hlopt{+}     \hlcom{# conditional mean}
+                            \hlstd{StCQoz)}
+ \hlstd{mf_samp[,i]} \hlkwb{<-} \hlkwd{as.vector}\hlstd{(mu_post[,i]} \hlopt{+}       \hlcom{# generate sample}
+                            \hlstd{L_S_post} \hlopt{%*%} \hlkwd{rnorm}\hlstd{(}\hlkwd{nrow}\hlstd{(B)))}
+\hlstd{\}}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+Now that we have our mole-fraction samples we can plot the credibility intervals at the unobserved location. We do this by taking the 6th row (recall that $m = 6$) of the mole-fraction samples matrix, putting the rows into a data frame and plotting the result.
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{stat1} \hlkwb{<-}  \hlkwd{seq}\hlstd{(}\hlnum{6}\hlstd{,}\hlnum{600}\hlstd{,}\hlkwc{by}\hlstd{=}\hlnum{6}\hlstd{)}
+\hlstd{mu} \hlkwb{<-} \hlkwd{apply}\hlstd{(mf_samp[stat1,}\hlopt{-}\hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlnum{1000}\hlstd{,i)],}\hlnum{1}\hlstd{,median)}
+\hlstd{uq} \hlkwb{<-} \hlkwd{apply}\hlstd{(mf_samp[stat1,}\hlopt{-}\hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlnum{1000}\hlstd{,i)],}\hlnum{1}\hlstd{,quantile,}\hlnum{0.75}\hlstd{)}
+\hlstd{lq} \hlkwb{<-} \hlkwd{apply}\hlstd{(mf_samp[stat1,}\hlopt{-}\hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlnum{1000}\hlstd{,i)],}\hlnum{1}\hlstd{,quantile,}\hlnum{0.25}\hlstd{)}
+\hlstd{uuq} \hlkwb{<-} \hlkwd{apply}\hlstd{(mf_samp[stat1,}\hlopt{-}\hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlnum{1000}\hlstd{,i)],}\hlnum{1}\hlstd{,quantile,}\hlnum{0.95}\hlstd{)}
+\hlstd{llq} \hlkwb{<-} \hlkwd{apply}\hlstd{(mf_samp[stat1,}\hlopt{-}\hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlnum{1000}\hlstd{,i)],}\hlnum{1}\hlstd{,quantile,}\hlnum{0.05}\hlstd{)}
+\hlstd{df} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}\hlkwc{mean} \hlstd{= mu,} \hlkwc{uq}\hlstd{=uq,}\hlkwc{lq}\hlstd{=lq,}\hlkwc{uuq}\hlstd{=uuq,}\hlkwc{llq}\hlstd{=llq,}\hlkwc{t}\hlstd{=}\hlnum{1}\hlopt{:}\hlkwd{length}\hlstd{(mu))}
+
+\hlstd{g} \hlkwb{<-} \hlkwd{LinePlotTheme}\hlstd{()} \hlopt{+}
+  \hlkwd{geom_ribbon}\hlstd{(}\hlkwc{data}\hlstd{=df,}\hlkwd{aes}\hlstd{(}\hlkwc{x}\hlstd{=t,}\hlkwc{ymax}\hlstd{=uq,}\hlkwc{ymin}\hlstd{=lq),}\hlkwc{alpha}\hlstd{=}\hlnum{0.6}\hlstd{)} \hlopt{+}
+  \hlkwd{geom_ribbon}\hlstd{(}\hlkwc{data}\hlstd{=df,}\hlkwd{aes}\hlstd{(}\hlkwc{x}\hlstd{=t,}\hlkwc{ymax}\hlstd{=uuq,}\hlkwc{ymin}\hlstd{=llq),}\hlkwc{alpha}\hlstd{=}\hlnum{0.3}\hlstd{)} \hlopt{+}
+  \hlkwd{geom_point}\hlstd{(}\hlkwc{data}\hlstd{=}\hlkwd{subset}\hlstd{(s_obs_old,s}\hlopt{==}\hlstd{new_obs),}
+             \hlkwd{aes}\hlstd{(}\hlkwc{x}\hlstd{=t,}\hlkwc{y} \hlstd{= z),}\hlkwc{colour}\hlstd{=}\hlstr{'black'}\hlstd{,}\hlkwc{size}\hlstd{=}\hlnum{3}\hlstd{,}\hlkwc{shape}\hlstd{=}\hlnum{4}\hlstd{)}\hlopt{+}
+    \hlkwd{ylab}\hlstd{(}\hlstr{"Ym (ppb)"}\hlstd{)} \hlopt{+} \hlkwd{xlab}\hlstd{(}\hlstr{"t (2 h steps)"}\hlstd{)}
+
+\hlkwa{if}\hlstd{(}\hlopt{!}\hlstd{misspecification)}
+  \hlkwd{ggsave}\hlstd{(}\hlstr{"../../MF_samples.png"}\hlstd{,}\hlkwc{plot} \hlstd{= g,}\hlkwc{width}\hlstd{=}\hlnum{10}\hlstd{,}\hlkwc{height}\hlstd{=}\hlnum{3}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{figure}[!ht]
+\begin{center}
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{print}\hlstd{(g)}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=\maxwidth]{figure/unnamed-chunk-9-1} 
+
+\end{knitrout}
+\caption{Distributions of mole fraction at $s = 0.3^\circ$ and $t \in \mathcal{T}$, following Gibbs sampling. The dark and light shadings denote the interquartile and the 5--95 percentile ranges, respectively. The crosses denote the true (simulated) mole fractions.} \label{fig:MF}
+\end{center}
+\end{figure}
+
+Finally, we calculate the statistics $S_{1,f}$, $S_{2,f}$ and $S_{1,m}^{0.3}$ as defined in the paper:
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{# Flux errors}
+\hlstd{residual} \hlkwb{<-}\hlstd{(st_grid}\hlopt{$}\hlstd{Yf[}\hlnum{1}\hlopt{:}\hlnum{75}\hlstd{]} \hlopt{-} \hlkwd{apply}\hlstd{(q,}\hlnum{1}\hlstd{,mean))}
+\hlstd{post_unc} \hlkwb{<-} \hlkwd{apply}\hlstd{(q,}\hlnum{1}\hlstd{,var)}
+\hlkwd{print}\hlstd{(}\hlkwd{paste0}\hlstd{(}\hlstr{"S1f = "}\hlstd{,} \hlkwd{sqrt}\hlstd{(}\hlkwd{mean}\hlstd{(residual}\hlopt{^}\hlnum{2}\hlstd{))))}
+\end{alltt}
+\begin{verbatim}
+## [1] "S1f = 286.704308542919"
+\end{verbatim}
+\begin{alltt}
+\hlkwd{print}\hlstd{(}\hlkwd{paste0}\hlstd{(}\hlstr{"S2f = "}\hlstd{,} \hlkwd{sqrt}\hlstd{(}\hlkwd{mean}\hlstd{(residual}\hlopt{^}\hlnum{2}\hlstd{)} \hlopt{/}\hlkwd{mean}\hlstd{(post_unc))))}
+\end{alltt}
+\begin{verbatim}
+## [1] "S2f = Inf"
+\end{verbatim}
+\begin{alltt}
+\hlcom{# MF errors}
+\hlstd{residual} \hlkwb{<-} \hlstd{(}\hlkwd{apply}\hlstd{(mf_samp[rm_idx,],}\hlnum{1}\hlstd{,mean)} \hlopt{-} \hlkwd{subset}\hlstd{(st_grid,s} \hlopt{==} \hlstd{new_obs)}\hlopt{$}\hlstd{Ym)}
+\hlstd{post_unc} \hlkwb{<-} \hlkwd{apply}\hlstd{(mf_samp[rm_idx,],}\hlnum{1}\hlstd{,var)}
+\hlkwd{print}\hlstd{(}\hlkwd{paste0}\hlstd{(}\hlstr{"S1m = "}\hlstd{,} \hlkwd{sqrt}\hlstd{(}\hlkwd{mean}\hlstd{(residual}\hlopt{^}\hlnum{2}\hlstd{))))}
+\end{alltt}
+\begin{verbatim}
+## [1] "S1m = 269.296985979694"
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
 
 
 \end{document}

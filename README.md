@@ -1,0 +1,44 @@
+atminv
+=====
+
+This page hosts a supplement package to the paper 'Spati-temporal bivariate
+    statistical models for atmospheric trace-gas inversion by Zammit-Mangion
+    et al. (2015, submitted). The accompanying vignette in this package
+    may be used to reproduce the results shown in Section 4.1 of the paper. We
+    do not provide repdocuible code for the example in Section 4.2 due to
+    restrictions on data availability.
+
+To download the vignette without reproducing it on your machine, please view it in the `vignettes` folder or by directly click on the following links:
+
+[Vignette (Section 4.1)](https://github.com/andrewzm/atminv/blob/master/vignettes/chemo_sim_study.pdf?raw=true)
+
+
+Presentation
+-----
+
+To access the presentation I gave for the 27th Goulburn Research Fellows Meeting (2015) that contained some slides on this topic, please [click here](https://github.com/andrewzm/bicon/blob/master/pres/2015_03_Goulburn.pdf?raw=true).
+
+
+Reproducibility 
+-------
+    
+If you wish to reproduce the results, you will need to install the package and its dependencies. One of its dependencies, `hmc`, needs to be installed manually. To do this please open an R consoles, make sure you have `devtools` installed, and then type
+
+    library(devtools)
+    install_github("andrewzm/hmc",,dependencies=T)
+
+To install the `atminv` package and the other dependencies, please make sure you have `devtools` loaded and then type
+
+    install_github("andrewzm/atminv",build_vignettes=T,dependencies=T)
+  
+If you do not wish to compile the vignette (which takes a while) please set `build_vignettes=F` above. Otherwise, to view the vignette please type
+
+    library(atminv)
+    vignette()
+    
+and select the vignette under `atminv`.
+
+References
+-----
+
+Zammit-Mangion, A., Cressie, N., Ganesan, A.L., O'Doherty, S., Manning, A.J. (2015). Spatio-temporal bivariate statistical models for atmospheric trace-gas inversion. Submitted.

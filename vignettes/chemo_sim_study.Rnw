@@ -200,11 +200,6 @@ library(tidyr)
 library(gstat)
 library(hmc)
 library(atminv)
-# load_all("../../../pkgs//hmc")
-#library(devtools)
-#load_all("..")
-#library(scales) # for format_format
-#load_all("../../../../../CurrentProjects/PostDoc Bristol/R Code/pkg/MVST")
 @
 
 We will now set up our simulation. Here we will only be concerned with the model `full' (`full\_big' analyses the case with 1000 observations and `diag' the case where the flux field is uncorrelated), which can be misspecified (\texttt{misspecification = 1}) or not (\texttt{misspecification = 0}). Recall the by misspecification here we imply that the flux field is indeed spatially correlated, but that we will model is as being uncorrelated. Below we set up the spatio-temporal grid and establish the parameters of the observation process and the mole-fraction discrepancy spaio-temporal field:
@@ -213,9 +208,11 @@ We will now set up our simulation. Here we will only be concerned with the model
 ###------------------
 ### Parameters
 ###------------------
+load_results  <- 0  # For quick vignette build
+cache_results <- 1 # Development only
 model = "full" ## Either sparse or full or full_big or diag
-misspecification = 0
-#set.seed(25) # 25 , T = 400 or 15/200
+misspecification = 1
+#set.seed(25)        # deprecated, ignore
 ds <- 0.2            # 0.2 spacing. 
                      # NB: If we change this we need to 
                      # change the round() command further down
@@ -806,13 +803,24 @@ EM_alg <- EM(s_obs = s_obs,                  # observation data frame
 
 To iterate the E- and M-steps we simply put the returned function in a loop, and indicate the maximum numer of gradient descents to carry out in the E- and M- steps. In this case we are going to limit the number of M-steps to 50. We also allow for a variable \texttt{fine\_tune\_E} that indicates on which iteration to carry out a second gradient descent at a higher convergence tolerance. This is particularly useful when the Hessian computed at `convergence' is not positive definite due to the tolerance used. 
 
-<<EM,cache=TRUE,results="hide">>=
-for(i in 1:(n_EM-2)) {
-  X <- EM_alg(max_E_it = 1e6,
-              max_M_it = 50,
-              fine_tune_E = (i==0))
+<<EM,results="hide">>=
+filename <- paste0(model,"_misspec_",misspecification,".rda")
+if(load_results) {
+  load(system.file("extdata",filename, package = "atminv"))
+} else {
+  for(i in 1:(n_EM-2)) {
+    X <- EM_alg(max_E_it = 1e6,
+                max_M_it = 50,
+                fine_tune_E = (i==0))
+  }
 }
 @
+
+\noindent The final parameter estimates are given by
+<<par-est>>=
+X$theta[,n_EM-1]
+@
+
 
 \section{HMC sampler}
 
@@ -837,7 +845,7 @@ if (model == "diag") {
 
 Now we formulate the equations required for the log-likelihood and the gradient of the log-likelihood of $\Yvec_f$. These are provided in the helper function \texttt{Yf\_marg\_approx\_fns} and its arguments are explained in-line.
 
-<<>>=
+<<laplace-fns>>=
 lap2 <- Yf_marg_approx_fns(s = s_obs,            # obs. locations
                            C_m = C_m,            # incidence matrix
                            Qobs = Qobs,          # obs. precision matrix
@@ -869,6 +877,9 @@ N <- 10000                 # number of samples
 q <- matrix(0,nrow(M),N)   # matrix for storing samples
 qsamp <- X$lap_approx$Yf   # first sample
 dither <- i <- count <- 1  # no dithering, initialise counts
+
+ if(!(N==10000) & cache_results) 
+   stop("Cannot cache unless N =10000")
 @
 
 
@@ -885,19 +896,23 @@ sampler <- hmc_sampler(U = lap2$logf,                 # log-likelihood
 
 We now run the HMC sampler by repeatedly iterating through it. We also can monitor the acceptance rate. For conciseness the output below is not produced. We then calculate the acceptance rate again after the HMC is run.
 
-<<HMC-run,results="hide",cache=TRUE>>=
-while(i < N) {
-  qsamp <- sampler(q = qsamp)
-  
-  if(count  == dither) {
-    q[,i] <- qsamp
-    count = 1
-    i <- i + 1
-    print(paste0("Sample: ",i," Acceptance rate: ",(nrow(unique(t(q)))-1)/i))
-  } else {
-    count <- count + 1
+<<HMC-run,results="hide">>=
+if(!load_results) {
+  while(i < N) {
+    qsamp <- sampler(q = qsamp)
+    
+    if(count  == dither) {
+      q[,i] <- qsamp
+      count = 1
+      i <- i + 1
+      print(paste0("Sample: ",i," Acceptance rate: ",(nrow(unique(t(q)))-1)/i))
+    } else {
+      count <- count + 1
+    }
   }
 }
+if(cache_results)
+    save(X,q,i,count,file=paste0("../inst/extdata/",filename))
 @
 
 
@@ -909,7 +924,7 @@ print(paste0("Sample: ",i," Acceptance rate: ",(nrow(unique(t(q)))-1)/i))
 
 In this section we show the code used to generate the results. First, we put the samples into a format we can work with (the variable `Q2') and then produce a box pot of the samples of the flux field at each of the prediction locations:
 
-<<flux-plot,include=FALSE,eval=FALSE>>=
+<<flux-plot>>=
  Q <- as.data.frame(t(q[1:length(X$ind),-c(1:1000,i)])) %>%
   tidyr::gather(t,z) %>%
   separate(t, into=c("V","s"),sep="V") %>%
@@ -943,7 +958,7 @@ if(!misspecification)
 
 \begin{figure}
 \begin{center}
-<<HMC-plot,fig.height=6,fig.width=5>>=
+<<HMC-plot,fig.height=4,fig.width=8>>=
 print(g)
 @
 \end{center}
@@ -953,7 +968,7 @@ print(g)
 
 We now compare the Laplace approximation of the flux field to the distribution given by HMC. We first create a function \texttt{comp\_density} that plots the HMC samples and the Laplace approximation for any arbitrary point, and then pass on two spatial locations to it for plotting:
 
-<<include=FALSE,eval=FALSE>>=
+<<density-compare>>=
 comp_density <- function(j,xu,xl=0,yu=0.01) {
   x <- seq(xl,xu,by=1)
   hist(q[j,1:(N-1)],xlab=c("flux (g/s/degree)"),
