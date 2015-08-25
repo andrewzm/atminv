@@ -11,35 +11,38 @@ Here we represent repdoducible code for the simulation study appearing in the pa
 
 To run the simulation study, you need to first install the packages `atminv' and `hmc'. You can do this as follows:
 
-<<eval=FALSE>>=
+<<installPkgs,eval=FALSE>>=
 library(devtools)
 install_github("andrewzm/hmc")
-install_github("")
+install_github("andrewzm/atminv")
 @
 
+This only needs to be done once. Now that we have the development packages installed, we can now load the others that we will need. The first two, \texttt{ggplot2} and \texttt{grid} are plotting purposes. The package \texttt{dplyr} is used for fast table manipulation and for `piping' a sequence of commands. The package \texttt{Matrix} is needed for taking advantage of sparsity in some operations and \texttt{tidyr} is needed for rearranging tables. Finall the in-house developed packages \texttt{hmc} and \texttt{atminv} are used for implementing the Hamiltonian Monte Carlo sampler and the EM algorithm for parameter estimation, respectively.
 
-<<>>=
+<<loadPkgs>>=
 ## This problem ONLY works if b is of relatively local scope. Once we have b which has a very large scope we get oscillations/instability
-
-library(devtools)
 library(ggplot2)
 library(grid)
 library(dplyr)
 library(Matrix)
 library(tidyr)
+library(hmc)
+#library(atminv)
+# load_all("../../../pkgs//hmc")
+library(devtools)
+load_all("..")
 #library(scales) # for format_format
 #load_all("../../../../../CurrentProjects/PostDoc Bristol/R Code/pkg/MVST")
-load_all("../../../pkgs//hmc")
-load_all("../../../pkgs//atminv")
+@
 
-rm(list=ls())
-
+We will now set up our simulation. Here we will only be concerned with the model `full' (please ignore the other settings), which can be misspecified (\texttt{misspecification = 1}) or not (\texttt{misspecification = 0}).
+<<>>=
 ###------------------
 ### Parameters
 ###------------------
 model = "full" ## Either sparse or full or full_big or diag
 misspecification = 0
-set.seed(25) # 25 , T = 400 or 15/200
+#set.seed(25) # 25 , T = 400 or 15/200
 ds <- 0.2 ## If we change this we need to change the round() command further down
 smin = -10 + ds/2
 smax =  10 - ds/2
@@ -227,16 +230,19 @@ if(model == "full") {
         ylab("") +
         scale_linetype_discrete(guide=guide_legend(title="process"),labels=c("Yf (g/s/degree)","Ym (ppb)")) +
         xlab("s (degrees)")
-    ggsave(g,filename = "../Sim_plot.png",width=10,height=4)
-
-    source("ggplot_dual_axis.R")
+    ggsave(g,filename = "../../Sim_plot.png",width=10,height=4)
+    print(g)
+    
+    source("../../R/ggplot_dual_axis.R")
     g1 <- LinePlotTheme() + geom_line(data=subset(X,!(s==new_obs) & process=="Yf"),aes(x=s,y=value)) + ylab("Yf (g/s/degree)") + theme(text = element_text(size=15),axis.title.y=element_text(vjust=0.6)) + xlab("s (degrees)")
     g2 <- LinePlotTheme() + geom_line(data=subset(X,!(s==new_obs) & process=="Ym_av"),aes(x=s,y=value),linetype="dashed") + ylim(0,900) + theme(text = element_text(size=15),axis.title.y=element_text(vjust=0.6)) +
         geom_segment(data=s_obs[1:5,],aes(x=s, xend=s, y = 0, yend = 50),
                      arrow=arrow(length=unit(0.1,"cm"))) + ylab("Ym (ppb)")
     G <- ggplot_dual_axis(g1,g2)
 }
+@
 
+<<eval=FALSE,include=FALSE>>=
 
 ###----------------------------------
 ### Emulation
@@ -355,7 +361,7 @@ if(model == "full") {
     coord_fixed(xlim=c(-10,10),ratio = 0.5)  +
         facet_grid(~s) +
     theme(panel.margin = unit(1.5, "lines")) + xlab("u (degrees)") + ylab("t (2 h steps)")
-  ggsave(filename = "../B_plot.png",width=12)
+  ggsave(filename = "../../B_plot.png",width=12)
 }
 
 mu_f <- matrix(exp(0.5*diag(S_f_log)))
