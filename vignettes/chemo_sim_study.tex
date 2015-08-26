@@ -60,6 +60,7 @@
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage[normalem]{ulem}
+\usepackage{comment}
 
 \newcommand{\zerob} {{\bf 0}}
 \newcommand{\oneb} {{\bf 1}}
@@ -257,7 +258,8 @@ This only needs to be done once. Now that we have the development packages insta
 \end{kframe}
 \end{knitrout}
 
-We will now set up our simulation. Here we will only be concerned with the model `full' (`full\_big' analyses the case with 1000 observations and `diag' the case where the flux field is uncorrelated), which can be misspecified (\texttt{misspecification = 1}) or not (\texttt{misspecification = 0}). Recall the by misspecification here we imply that the flux field is indeed spatially correlated, but that we will model is as being uncorrelated. Below we set up the spatio-temporal grid and establish the parameters of the observation process and the mole-fraction discrepancy spaio-temporal field:
+We will now set up our simulation. Here we will only be concerned with the model `full' (`full\_big' analyses the case with 1000 observations and `diag' the case where the flux field is uncorrelated), which can be misspecified (\texttt{misspecification = 1}) or not (\texttt{misspecification = 0}). Recall the by misspecification here we imply that the flux field is indeed spatially correlated, but that we will model is as being uncorrelated. Below we set up the spatio-temporal grid and establish the parameters of the observation process and the mole-fraction discrepancy spatio-temporal field:
+
 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
@@ -266,10 +268,10 @@ We will now set up our simulation. Here we will only be concerned with the model
 \hlcom{### Parameters}
 \hlcom{###------------------}
 \hlstd{load_results}  \hlkwb{<-} \hlnum{1}  \hlcom{# For quick vignette build}
-\hlstd{cache_results} \hlkwb{<-} \hlnum{0} \hlcom{# Development only}
-\hlstd{model} \hlkwb{=} \hlstr{"full"} \hlcom{## Either sparse or full or full_big or diag}
+\hlstd{cache_results} \hlkwb{<-} \hlnum{0}  \hlcom{# Development only}
+\hlstd{model} \hlkwb{=} \hlstr{"full_big"}  \hlcom{## Either sparse or full or full_big or diag}
 \hlstd{misspecification} \hlkwb{=} \hlnum{0}
-\hlcom{#set.seed(25) # 25 , T = 400 or 15/200}
+\hlcom{#set.seed(25)        # deprecated, ignore}
 \hlstd{ds} \hlkwb{<-} \hlnum{0.2}            \hlcom{# 0.2 spacing. }
                      \hlcom{# NB: If we change this we need to }
                      \hlcom{# change the round() command further down}
@@ -522,10 +524,10 @@ To add the discrepancy, we first compuate the spatio-temporal covariance matrix 
     \hlstd{C_m} \hlkwb{<-} \hlkwd{.symDiagonal}\hlstd{(}\hlkwd{nrow}\hlstd{(s_obs))}
 \hlstd{\}} \hlkwa{else if}\hlstd{(model} \hlopt{==} \hlstr{"full_big"}\hlstd{) \{}
 
-    \hlstd{corr_s_mat} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{theta_s}\hlstd{)} \hlkwd{corr_s}\hlstd{(}\hlkwc{s} \hlstd{= s_axis,}\hlkwc{theta_s} \hlstd{= theta_s)}
-    \hlstd{corr_t_mat} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{theta_t}\hlstd{)} \hlkwd{corr_t}\hlstd{(}\hlkwc{t} \hlstd{= t_axis,}\hlkwc{theta_t} \hlstd{= theta_t)}
-    \hlstd{d_corr_s_mat} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{theta_s}\hlstd{)} \hlkwd{d_corr_s}\hlstd{(}\hlkwc{s} \hlstd{= s_axis,}\hlkwc{theta_s} \hlstd{= theta_s)}
-    \hlstd{d_corr_t_mat} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{theta_t}\hlstd{)} \hlkwd{d_corr_t}\hlstd{(}\hlkwc{t} \hlstd{= t_axis,}\hlkwc{theta_t} \hlstd{= theta_t)}
+    \hlstd{corr_s_mat} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{theta_s}\hlstd{) atminv}\hlopt{:::}\hlkwd{corr_s}\hlstd{(}\hlkwc{s} \hlstd{= s_axis,}\hlkwc{theta_s} \hlstd{= theta_s)}
+    \hlstd{corr_t_mat} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{theta_t}\hlstd{) atminv}\hlopt{:::}\hlkwd{corr_t}\hlstd{(}\hlkwc{t} \hlstd{= t_axis,}\hlkwc{theta_t} \hlstd{= theta_t)}
+    \hlstd{d_corr_s_mat} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{theta_s}\hlstd{) atminv}\hlopt{:::}\hlkwd{d_corr_s}\hlstd{(}\hlkwc{s} \hlstd{= s_axis,}\hlkwc{theta_s} \hlstd{= theta_s)}
+    \hlstd{d_corr_t_mat} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{theta_t}\hlstd{) atminv}\hlopt{:::}\hlkwd{d_corr_t}\hlstd{(}\hlkwc{t} \hlstd{= t_axis,}\hlkwc{theta_t} \hlstd{= theta_t)}
 
     \hlstd{C_idx} \hlkwb{<-} \hlstd{st_grid} \hlopt{%>%}
       \hlkwd{as.data.frame}\hlstd{()} \hlopt{%>%}
@@ -549,7 +551,9 @@ To add the discrepancy, we first compuate the spatio-temporal covariance matrix 
                \hlkwc{z} \hlstd{= z} \hlopt{+} \hlstd{dis)}
 \hlstd{\}}
 \end{alltt}
-\end{kframe}
+
+
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# Joining by: c("{}s"{}, "{}t"{})}}\end{kframe}
 \end{knitrout}
 
 
@@ -586,11 +590,9 @@ Here we provide the code for generating the two plots in the paper (Figure 3). T
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlkwd{print}\hlstd{(g)}
+\hlkwa{if}\hlstd{(model} \hlopt{==} \hlstr{"full"}\hlstd{)} \hlkwd{print}\hlstd{(g)}
 \end{alltt}
 \end{kframe}
-\includegraphics[width=\maxwidth]{figure/YfYm-plot-1} 
-
 \end{knitrout}
 \end{center}
 \caption{A sample realisation of the flux field (solid line), the resulting time-averaged mole-fraction field (dashed line) and the five observation locations (arrows).}
@@ -667,11 +669,9 @@ The second, in Figure \ref{fig:B}, shows the SRR at each observation location:
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlkwd{print}\hlstd{(B_plot)}
+\hlkwa{if}\hlstd{(model} \hlopt{==} \hlstr{"full"}\hlstd{)} \hlkwd{print}\hlstd{(B_plot)}
 \end{alltt}
 \end{kframe}
-\includegraphics[width=\maxwidth]{figure/B-plot-1} 
-
 \end{knitrout}
 \end{center}
 \caption{ The source-receptor relationship $b_t(s,u)$ synthesised at five observation locations $s \in D^O_m = \{-5.3^\circ, -4.5^\circ,-3.9^\circ,-3.7^\circ,-0.1^\circ \}$. Note that $b_t(s,u) = 0$ for $u > 4.3$}
@@ -704,9 +704,10 @@ We then set the settings for the Laplace approximation. These vary accoring to t
 \hlcom{###-----------------------------------------------------}
 \hlcom{### Laplace method -- use with caution because of mode close to zero}
 \hlcom{###-----------------------------------------------------}
-\hlstd{n_EM} \hlkwb{<-} \hlnum{100}
+
 
 \hlkwa{if}\hlstd{(model} \hlopt{==} \hlstr{"full"}\hlstd{) \{}
+  \hlstd{n_EM} \hlkwb{<-} \hlnum{100}
   \hlstd{s_mol} \hlkwb{=} \hlstd{s_obs}\hlopt{$}\hlstd{s[}\hlnum{1}\hlopt{:}\hlstd{m_obs]}         \hlcom{# prediction locs for mol fraction}
   \hlstd{Y_init} \hlkwb{=} \hlkwd{c}\hlstd{(mu_f,s_obs}\hlopt{$}\hlstd{z)}         \hlcom{# initial expectation value for Y}
   \hlstd{theta_init} \hlkwb{=} \hlkwd{c}\hlstd{(}\hlnum{1000}\hlstd{,}\hlnum{0.2}\hlstd{,}\hlnum{0.2}\hlstd{)}     \hlcom{# initial parameter vector}
@@ -720,6 +721,7 @@ We then set the settings for the Laplace approximation. These vary accoring to t
   \hlstd{Qobs} \hlkwb{<-} \hlstd{Qobs[}\hlopt{-}\hlstd{rm_idx,}\hlopt{-}\hlstd{rm_idx]}   \hlcom{# new (observation) precision matrix}
 
 \hlstd{\}} \hlkwa{else if} \hlstd{(model} \hlopt{==} \hlstr{"full_big"}\hlstd{) \{}
+    \hlstd{n_EM} \hlkwb{<-} \hlnum{10}
     \hlstd{s_mol} \hlkwb{=} \hlstd{s_axis}                \hlcom{# prediction locs for mol fraction}
     \hlstd{Y_init} \hlkwb{=} \hlkwd{c}\hlstd{(mu_f,st_grid}\hlopt{$}\hlstd{Ym)}   \hlcom{# initial expectation value for Y}
     \hlstd{theta_init} \hlkwb{=} \hlkwd{c}\hlstd{(}\hlnum{1000}\hlstd{,}\hlnum{0.2}\hlstd{,}\hlnum{0.2}\hlstd{)}  \hlcom{# initial parameter vector}
@@ -771,21 +773,58 @@ To iterate the E- and M-steps we simply put the returned function in a loop, and
   \hlstd{\}}
 \hlstd{\}}
 \end{alltt}
+
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning in readChar(con, 5L, useBytes = TRUE): cannot open compressed file '', probable reason 'No such file or directory'}}
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in readChar(con, 5L, useBytes = TRUE): cannot open the connection}}\begin{alltt}
+\hlkwa{if}\hlstd{(cache_results} \hlopt{&} \hlstd{model} \hlopt{==} \hlstr{"full_big"}\hlstd{)}
+    \hlkwd{save}\hlstd{(X,q,i,count,}\hlkwc{file}\hlstd{=}\hlkwd{paste0}\hlstd{(}\hlstr{"../inst/extdata/"}\hlstd{,filename))}
+\end{alltt}
 \end{kframe}
 \end{knitrout}
 
-The final parameter estimates are given by
+\noindent The final parameter estimates are given by
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlstd{X}\hlopt{$}\hlstd{theta[,n_EM}\hlopt{-}\hlnum{1}\hlstd{]}
 \end{alltt}
-\begin{verbatim}
-## [1] 1964.9329277    0.7135804    0.7721958
-\end{verbatim}
-\end{kframe}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in eval(expr, envir, enclos): object 'X' not found}}\end{kframe}
 \end{knitrout}
 
+\noindent while a plot showing parameter convergene is given in Figure \ref{fig:EM-convergence}
+
+\begin{figure}
+\begin{center}
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{plot}\hlstd{(X}\hlopt{$}\hlstd{theta[}\hlnum{1}\hlstd{,])}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in plot(X\$theta[1, ]): object 'X' not found}}\begin{alltt}
+\hlkwd{plot}\hlstd{(X}\hlopt{$}\hlstd{theta[}\hlnum{2}\hlstd{,])}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in plot(X\$theta[2, ]): object 'X' not found}}\begin{alltt}
+\hlkwd{plot}\hlstd{(X}\hlopt{$}\hlstd{theta[}\hlnum{3}\hlstd{,])}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in plot(X\$theta[3, ]): object 'X' not found}}\end{kframe}
+\end{knitrout}
+\end{center}
+\caption{Convergence of the three parameters $\thetab = (\sigma_\zeta^2,a,d)'$. Left panel: The parameter $\sigma_\zeta^2$. Centre panel: The parameter $a$. Right panel: The parameter $d$.}
+\label{fig:EM-convergence}
+\end{figure}
+
+
+\begin{comment}
 
 \section{HMC sampler}
 
@@ -819,7 +858,9 @@ Now we formulate the equations required for the log-likelihood and the gradient 
                            \hlkwc{S_f_log} \hlstd{= S_f_log,}    \hlcom{# covariance of log(Y_f)}
                            \hlkwc{ind}\hlstd{=X}\hlopt{$}\hlstd{ind)}            \hlcom{# only consider indices with SRR>0}
 \end{alltt}
-\end{kframe}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in Yf\_marg\_approx\_fns(s = s\_obs, C\_m = C\_m, Qobs = Qobs, B = B, : object 'X' not found}}\end{kframe}
 \end{knitrout}
 
 Next, we set some parameters for the sampler. We set the number of steps per sample $L = 10$, the number of samples $N = 10000$, and the step-size $\Delta \in [0.066,0.068]$ (below denoted as `eps\_gen'). Other variables are defined in-line:
@@ -828,7 +869,10 @@ Next, we set some parameters for the sampler. We set the number of steps per sam
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlstd{M} \hlkwb{<-} \hlkwd{diag}\hlstd{(}\hlnum{1}\hlopt{/}\hlstd{(X}\hlopt{$}\hlstd{lap_approx}\hlopt{$}\hlstd{Yf}\hlopt{^}\hlnum{2}\hlstd{))} \hlcom{# scaling matrix: puts variables on same scale}
+\end{alltt}
 
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in diag(1/(X\$lap\_approx\$Yf\textasciicircum{}2)): error in evaluating the argument 'x' in selecting a method for function 'diag': Error: object 'X' not found}}\begin{alltt}
 \hlkwa{if}\hlstd{(model} \hlopt{==} \hlstr{"full"}\hlstd{)\{}             \hlcom{# Function for generating Delta}
   \hlstd{eps_gen} \hlkwb{<-} \hlkwa{function}\hlstd{()}
     \hlkwd{runif}\hlstd{(}\hlkwc{n}\hlstd{=}\hlnum{1}\hlstd{,}
@@ -841,13 +885,21 @@ Next, we set some parameters for the sampler. We set the number of steps per sam
           \hlkwc{max} \hlstd{=} \hlnum{0.0067}\hlstd{)}
 \hlstd{\}}
 \hlstd{L} \hlkwb{<-} \hlnum{10L}                   \hlcom{# step-size}
-\hlstd{N} \hlkwb{<-} \hlnum{100}                 \hlcom{# number of samples}
+\hlstd{N} \hlkwb{<-} \hlnum{10000}                 \hlcom{# number of samples}
 \hlstd{q} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlnum{0}\hlstd{,}\hlkwd{nrow}\hlstd{(M),N)}   \hlcom{# matrix for storing samples}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in nrow(M): object 'M' not found}}\begin{alltt}
 \hlstd{qsamp} \hlkwb{<-} \hlstd{X}\hlopt{$}\hlstd{lap_approx}\hlopt{$}\hlstd{Yf}   \hlcom{# first sample}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in eval(expr, envir, enclos): object 'X' not found}}\begin{alltt}
 \hlstd{dither} \hlkwb{<-} \hlstd{i} \hlkwb{<-} \hlstd{count} \hlkwb{<-} \hlnum{1}  \hlcom{# no dithering, initialise counts}
 
-\hlcom{# if(!(N==10000) & cache_results) }
-\hlcom{#   stop("Cannot cache unless N =10000")}
+ \hlkwa{if}\hlstd{(}\hlopt{!}\hlstd{(N}\hlopt{==}\hlnum{10000}\hlstd{)} \hlopt{&} \hlstd{cache_results)}
+   \hlkwd{stop}\hlstd{(}\hlstr{"Cannot cache unless N =10000"}\hlstd{)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
@@ -865,7 +917,9 @@ The sampler is set up using the function \texttt{sampler} in the \texttt{hmc} pa
                        \hlkwc{L} \hlstd{= L,}                         \hlcom{# number of steps}
                        \hlkwc{lower} \hlstd{=} \hlkwd{rep}\hlstd{(}\hlnum{0}\hlstd{,}\hlkwd{length}\hlstd{(X}\hlopt{$}\hlstd{ind)))}  \hlcom{# lower limits}
 \end{alltt}
-\end{kframe}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in stopifnot(is.function(U)): object 'lap2' not found}}\end{kframe}
 \end{knitrout}
 
 We now run the HMC sampler by repeatedly iterating through it. We also can monitor the acceptance rate. For conciseness the output below is not produced. We then calculate the acceptance rate again after the HMC is run.
@@ -886,7 +940,15 @@ We now run the HMC sampler by repeatedly iterating through it. We also can monit
       \hlstd{count} \hlkwb{<-} \hlstd{count} \hlopt{+} \hlnum{1}
     \hlstd{\}}
   \hlstd{\}}
+\hlstd{\}} \hlkwa{else} \hlstd{\{}
+  \hlkwd{load}\hlstd{(}\hlkwd{system.file}\hlstd{(}\hlstr{"extdata"}\hlstd{,filename,} \hlkwc{package} \hlstd{=} \hlstr{"atminv"}\hlstd{))}
 \hlstd{\}}
+\end{alltt}
+
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning in readChar(con, 5L, useBytes = TRUE): cannot open compressed file '', probable reason 'No such file or directory'}}
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in readChar(con, 5L, useBytes = TRUE): cannot open the connection}}\begin{alltt}
 \hlkwa{if}\hlstd{(cache_results)}
     \hlkwd{save}\hlstd{(X,q,i,count,}\hlkwc{file}\hlstd{=}\hlkwd{paste0}\hlstd{(}\hlstr{"../inst/extdata/"}\hlstd{,filename))}
 \end{alltt}
@@ -899,10 +961,9 @@ We now run the HMC sampler by repeatedly iterating through it. We also can monit
 \begin{alltt}
 \hlkwd{print}\hlstd{(}\hlkwd{paste0}\hlstd{(}\hlstr{"Sample: "}\hlstd{,i,}\hlstr{" Acceptance rate: "}\hlstd{,(}\hlkwd{nrow}\hlstd{(}\hlkwd{unique}\hlstd{(}\hlkwd{t}\hlstd{(q)))}\hlopt{-}\hlnum{1}\hlstd{)}\hlopt{/}\hlstd{i))}
 \end{alltt}
-\begin{verbatim}
-## [1] "Sample: 1 Acceptance rate: 0"
-\end{verbatim}
-\end{kframe}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in print(paste0("{}Sample: "{}, i, "{} Acceptance rate: "{}, (nrow(unique(t(q))) - : error in evaluating the argument 'x' in selecting a method for function 'print': Error in t.default(q) : argument is not a matrix\\\#\# Calls: paste0 -> nrow -> unique -> t -> t -> t.default}}\end{kframe}
 \end{knitrout}
 
 \section{Results}
@@ -920,7 +981,7 @@ In this section we show the code used to generate the results. First, we put the
 \end{alltt}
 
 
-{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in matrix(unlist(pieces), ncol = n, byrow = TRUE): 'data' must be of a vector type, was 'NULL'}}\begin{alltt}
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in t(q[1:length(X\$ind), -c(1:1000, i)]): error in evaluating the argument 'x' in selecting a method for function 't': Error: object 'X' not found}}\begin{alltt}
 \hlstd{Q2} \hlkwb{<-} \hlstd{Q} \hlopt{%>%}
       \hlkwd{mutate}\hlstd{(}\hlkwc{s} \hlstd{=} \hlkwd{as.factor}\hlstd{(s))}
 \end{alltt}
@@ -954,7 +1015,7 @@ In this section we show the code used to generate the results. First, we put the
 \end{alltt}
 
 
-{\ttfamily\noindent\itshape\color{messagecolor}{\#\# Saving 10 x 7 in image}}\end{kframe}
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in inherits(plot, "{}ggplot"{}): object 'g' not found}}\end{kframe}
 \end{knitrout}
 
 
@@ -965,9 +1026,9 @@ In this section we show the code used to generate the results. First, we put the
 \begin{alltt}
 \hlkwd{print}\hlstd{(g)}
 \end{alltt}
-\end{kframe}
-\includegraphics[width=\maxwidth]{figure/HMC-plot-1} 
 
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in print(g): error in evaluating the argument 'x' in selecting a method for function 'print': Error: object 'g' not found}}\end{kframe}
 \end{knitrout}
 \end{center}
 \caption{Samples from the posterior distribution of the lognormal flux field obtained using Hamiltonian Monte Carlo (HMC). The boxes denote the interquartile range, the whiskers extend to the last values that are within 1.5 times the interquartile range from the quartiles, and the dots show the samples that lie beyond the end of the whiskers. The crosses denote the true (simulated) fluxes, and the arrows denote the locations of the measurements. The vertical dashed lines show the spatial locations analysed in Figure \ref{fig:Lap_vs_mcmc}. Since the observed mole fractions are insensitive to flux at $\{s : s > 4.3\}$, these locations were excluded from the model.}
@@ -999,11 +1060,9 @@ We now compare the Laplace approximation of the flux field to the distribution g
   \hlkwd{comp_density}\hlstd{(}\hlnum{24}\hlstd{,}\hlnum{400}\hlstd{,}\hlnum{50}\hlstd{,}\hlkwc{yu}\hlstd{=}\hlnum{0.014}\hlstd{);} \hlkwd{dev.off}\hlstd{()}
 \hlstd{\}}
 \end{alltt}
-\begin{verbatim}
-## pdf 
-##   2
-\end{verbatim}
-\end{kframe}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in q[j, 1:(N - 1)]: object of type 'closure' is not subsettable}}\end{kframe}
 \end{knitrout}
 
 
@@ -1014,11 +1073,15 @@ We now compare the Laplace approximation of the flux field to the distribution g
 \begin{alltt}
 \hlkwd{par}\hlstd{(}\hlkwc{mfrow}\hlstd{=}\hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,}\hlnum{2}\hlstd{))}
 \hlkwd{comp_density}\hlstd{(}\hlnum{70}\hlstd{,}\hlnum{800}\hlstd{,}\hlopt{-}\hlnum{200}\hlstd{,}\hlkwc{yu}\hlstd{=}\hlnum{0.005}\hlstd{);}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in q[j, 1:(N - 1)]: object of type 'closure' is not subsettable}}\begin{alltt}
 \hlkwd{comp_density}\hlstd{(}\hlnum{24}\hlstd{,}\hlnum{400}\hlstd{,}\hlnum{50}\hlstd{,}\hlkwc{yu}\hlstd{=}\hlnum{0.014}\hlstd{);}
 \end{alltt}
-\end{kframe}
-\includegraphics[width=\maxwidth]{figure/unnamed-chunk-8-1} 
 
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in q[j, 1:(N - 1)]: object of type 'closure' is not subsettable}}\end{kframe}
 \end{knitrout}
 \caption{Laplace approximation (dashed line) and a histogram of the empirical posterior distribution from the MCMC samples for the flux at $s = 3.9^\circ$ (left panel) and $s = -5.3^\circ$ (right panel).} \label{fig:Lap_vs_mcmc}
 \end{center}
@@ -1033,10 +1096,30 @@ Having obtained the flux field samples, we now used the collapsing property of t
 \hlstd{mf_samp} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlnum{0}\hlstd{,}\hlkwd{nrow}\hlstd{(B),N)}                \hlcom{# initialise mole-fraction samples array}
 \hlstd{mu_post} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlnum{0}\hlstd{,}\hlkwd{nrow}\hlstd{(B),N)}                \hlcom{# initialise mole-fraction samples array}
 \hlstd{Q_post} \hlkwb{<-} \hlkwd{t}\hlstd{(C_m)} \hlopt{%*%} \hlstd{Qobs} \hlopt{%*%} \hlstd{C_m} \hlopt{+} \hlstd{Q_zeta}    \hlcom{# conditional precision of Ym}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in eval(expr, envir, enclos): object 'Q\_zeta' not found}}\begin{alltt}
 \hlstd{S_post} \hlkwb{<-} \hlkwd{chol2inv}\hlstd{(}\hlkwd{chol}\hlstd{(Q_post))}              \hlcom{# conditional covariance of Ym}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in chol2inv(chol(Q\_post)): error in evaluating the argument 'x' in selecting a method for function 'chol2inv': Error in chol(Q\_post) : \\\#\#\ \  error in evaluating the argument 'x' in selecting a method for function 'chol': Error: object 'Q\_post' not found}}\begin{alltt}
 \hlstd{L_S_post} \hlkwb{<-} \hlkwd{t}\hlstd{(}\hlkwd{chol}\hlstd{(S_post))}                   \hlcom{# Cholesky decomposition of above}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in t(chol(S\_post)): error in evaluating the argument 'x' in selecting a method for function 't': Error in chol(S\_post) : \\\#\#\ \  error in evaluating the argument 'x' in selecting a method for function 'chol': Error: object 'S\_post' not found}}\begin{alltt}
 \hlstd{SQB} \hlkwb{<-} \hlstd{S_post} \hlopt{%*%} \hlstd{Q_zeta} \hlopt{%*%} \hlstd{B[,X}\hlopt{$}\hlstd{ind]}        \hlcom{# weight given to flux sample}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in eval(expr, envir, enclos): object 'S\_post' not found}}\begin{alltt}
 \hlstd{StCQoz} \hlkwb{<-} \hlstd{S_post} \hlopt{%*%} \hlkwd{t}\hlstd{(C_m)} \hlopt{%*%} \hlstd{Qobs} \hlopt{%*%} \hlstd{s_obs}\hlopt{$}\hlstd{z} \hlcom{# influence of observation}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in eval(expr, envir, enclos): object 'S\_post' not found}}\begin{alltt}
 \hlkwa{for} \hlstd{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hlstd{N)\{}
  \hlstd{mu_post[,i]} \hlkwb{<-} \hlkwd{as.vector}\hlstd{(SQB} \hlopt{%*%} \hlstd{q[,i]} \hlopt{+}     \hlcom{# conditional mean}
                             \hlstd{StCQoz)}
@@ -1044,7 +1127,9 @@ Having obtained the flux field samples, we now used the collapsing property of t
                             \hlstd{L_S_post} \hlopt{%*%} \hlkwd{rnorm}\hlstd{(}\hlkwd{nrow}\hlstd{(B)))}
 \hlstd{\}}
 \end{alltt}
-\end{kframe}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in as.vector(SQB \%*\% q[, i] + StCQoz): error in evaluating the argument 'x' in selecting a method for function 'as.vector': Error: object 'SQB' not found}}\end{kframe}
 \end{knitrout}
 
 Now that we have our mole-fraction samples we can plot the credibility intervals at the unobserved location. We do this by taking the 6th row (recall that $m = 6$) of the mole-fraction samples matrix, putting the rows into a data frame and plotting the result.
@@ -1065,11 +1150,16 @@ Now that we have our mole-fraction samples we can plot the credibility intervals
   \hlkwd{geom_point}\hlstd{(}\hlkwc{data}\hlstd{=}\hlkwd{subset}\hlstd{(s_obs_old,s}\hlopt{==}\hlstd{new_obs),}
              \hlkwd{aes}\hlstd{(}\hlkwc{x}\hlstd{=t,}\hlkwc{y} \hlstd{= z),}\hlkwc{colour}\hlstd{=}\hlstr{'black'}\hlstd{,}\hlkwc{size}\hlstd{=}\hlnum{3}\hlstd{,}\hlkwc{shape}\hlstd{=}\hlnum{4}\hlstd{)}\hlopt{+}
     \hlkwd{ylab}\hlstd{(}\hlstr{"Ym (ppb)"}\hlstd{)} \hlopt{+} \hlkwd{xlab}\hlstd{(}\hlstr{"t (2 h steps)"}\hlstd{)}
+\end{alltt}
 
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in subset(s\_obs\_old, s == new\_obs): object 's\_obs\_old' not found}}\begin{alltt}
 \hlkwa{if}\hlstd{(}\hlopt{!}\hlstd{misspecification)}
   \hlkwd{ggsave}\hlstd{(}\hlstr{"../../MF_samples.png"}\hlstd{,}\hlkwc{plot} \hlstd{= g,}\hlkwc{width}\hlstd{=}\hlnum{10}\hlstd{,}\hlkwc{height}\hlstd{=}\hlnum{3}\hlstd{)}
 \end{alltt}
-\end{kframe}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in inherits(plot, "{}ggplot"{}): object 'g' not found}}\end{kframe}
 \end{knitrout}
 
 \begin{figure}[!ht]
@@ -1079,9 +1169,9 @@ Now that we have our mole-fraction samples we can plot the credibility intervals
 \begin{alltt}
 \hlkwd{print}\hlstd{(g)}
 \end{alltt}
-\end{kframe}
-\includegraphics[width=\maxwidth]{figure/unnamed-chunk-9-1} 
 
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in print(g): error in evaluating the argument 'x' in selecting a method for function 'print': Error: object 'g' not found}}\end{kframe}
 \end{knitrout}
 \caption{Distributions of mole fraction at $s = 0.3^\circ$ and $t \in \mathcal{T}$, following Gibbs sampling. The dark and light shadings denote the interquartile and the 5--95 percentile ranges, respectively. The crosses denote the true (simulated) mole fractions.} \label{fig:MF}
 \end{center}
@@ -1094,29 +1184,42 @@ Finally, we calculate the statistics $S_{1,f}$, $S_{2,f}$ and $S_{1,m}^{0.3}$ as
 \begin{alltt}
 \hlcom{# Flux errors}
 \hlstd{residual} \hlkwb{<-}\hlstd{(st_grid}\hlopt{$}\hlstd{Yf[}\hlnum{1}\hlopt{:}\hlnum{75}\hlstd{]} \hlopt{-} \hlkwd{apply}\hlstd{(q,}\hlnum{1}\hlstd{,mean))}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in apply(q, 1, mean): dim(X) must have a positive length}}\begin{alltt}
 \hlstd{post_unc} \hlkwb{<-} \hlkwd{apply}\hlstd{(q,}\hlnum{1}\hlstd{,var)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in apply(q, 1, var): dim(X) must have a positive length}}\begin{alltt}
 \hlkwd{print}\hlstd{(}\hlkwd{paste0}\hlstd{(}\hlstr{"S1f = "}\hlstd{,} \hlkwd{sqrt}\hlstd{(}\hlkwd{mean}\hlstd{(residual}\hlopt{^}\hlnum{2}\hlstd{))))}
 \end{alltt}
-\begin{verbatim}
-## [1] "S1f = 286.704308542919"
-\end{verbatim}
-\begin{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in print(paste0("{}S1f = "{}, sqrt(mean(residual\textasciicircum{}2)))): error in evaluating the argument 'x' in selecting a method for function 'print': Error in mean(residual\textasciicircum{}2) : \\\#\#\ \  error in evaluating the argument 'x' in selecting a method for function 'mean': Error: object 'residual' not found\\\#\# Calls: paste0 -> mean}}\begin{alltt}
 \hlkwd{print}\hlstd{(}\hlkwd{paste0}\hlstd{(}\hlstr{"S2f = "}\hlstd{,} \hlkwd{sqrt}\hlstd{(}\hlkwd{mean}\hlstd{(residual}\hlopt{^}\hlnum{2}\hlstd{)} \hlopt{/}\hlkwd{mean}\hlstd{(post_unc))))}
 \end{alltt}
-\begin{verbatim}
-## [1] "S2f = Inf"
-\end{verbatim}
-\begin{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in print(paste0("{}S2f = "{}, sqrt(mean(residual\textasciicircum{}2)/mean(post\_unc)))): error in evaluating the argument 'x' in selecting a method for function 'print': Error in mean(residual\textasciicircum{}2) : \\\#\#\ \  error in evaluating the argument 'x' in selecting a method for function 'mean': Error: object 'residual' not found\\\#\# Calls: paste0 -> mean}}\begin{alltt}
 \hlcom{# MF errors}
 \hlstd{residual} \hlkwb{<-} \hlstd{(}\hlkwd{apply}\hlstd{(mf_samp[rm_idx,],}\hlnum{1}\hlstd{,mean)} \hlopt{-} \hlkwd{subset}\hlstd{(st_grid,s} \hlopt{==} \hlstd{new_obs)}\hlopt{$}\hlstd{Ym)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in apply(mf\_samp[rm\_idx, ], 1, mean): object 'rm\_idx' not found}}\begin{alltt}
 \hlstd{post_unc} \hlkwb{<-} \hlkwd{apply}\hlstd{(mf_samp[rm_idx,],}\hlnum{1}\hlstd{,var)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in apply(mf\_samp[rm\_idx, ], 1, var): object 'rm\_idx' not found}}\begin{alltt}
 \hlkwd{print}\hlstd{(}\hlkwd{paste0}\hlstd{(}\hlstr{"S1m = "}\hlstd{,} \hlkwd{sqrt}\hlstd{(}\hlkwd{mean}\hlstd{(residual}\hlopt{^}\hlnum{2}\hlstd{))))}
 \end{alltt}
-\begin{verbatim}
-## [1] "S1m = 269.296985979694"
-\end{verbatim}
-\end{kframe}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error in print(paste0("{}S1m = "{}, sqrt(mean(residual\textasciicircum{}2)))): error in evaluating the argument 'x' in selecting a method for function 'print': Error in mean(residual\textasciicircum{}2) : \\\#\#\ \  error in evaluating the argument 'x' in selecting a method for function 'mean': Error: object 'residual' not found\\\#\# Calls: paste0 -> mean}}\end{kframe}
 \end{knitrout}
 
-
+\end{comment}
 \end{document}
