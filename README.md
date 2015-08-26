@@ -44,9 +44,9 @@ Details
 
 Section 4.1 details three sub-experiments. The first is the vanilla case with no model misspecification. The second assumes model misspecification, specifically that the flux field is uncorrelated even though it is not. The third assumes no misspecification but uses 1000 observations and shows that the EM-Laplace algorithm can run even in this scenario. If you wish to run these three different scenarios please download the `.Rnw` file from the `vignettes` folder and `Compile PDF` in `RStudio`. Before doing so:
 
-To run the first case make sure `mode = "full"` and `misspecification = 0`.
-To run the second case make sure `mode = "full"` and `misspecification = 1`.
-To run the third case make sure `mode = "full_big"` and `misspecification = 0`.
+- To run the first case make sure `mode = "full"` and `misspecification = 0`.
+- To run the second case make sure `mode = "full"` and `misspecification = 1`.
+- To run the third case make sure `mode = "full_big"` and `misspecification = 0`.
 
 Note that if `load_results <- 1` then the computationally intensive results are simply loaded from cache. To run from scratch please set `load_results <- 0`.
 
