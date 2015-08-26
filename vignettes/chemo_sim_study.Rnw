@@ -173,7 +173,15 @@ library(knitr)
 opts_knit$set(width=40)
 @
  
+ 
+ 
 \begin{document}
+
+\title{Reproducible code for Section 4.1 of `Spatio-temporal bivariate statistical models for atmospheric trace-gas inversion'}
+
+\author{Andrew Zammit Mangion\footnote{National Institute for Applied Statistics Research Australia~(NIASRA), University of Wollongong, Australia}}                                                           
+
+\maketitle
 
 \begin{abstract}
 Here we represent repdoducible code for the simulation study appearing in the paper `Spatio-temporal bivariate statistical models for atmospheric trace-gas inversion', Section 4.1. The code requires the installation of two in-house developed packages for this application, \emph{hmc} and \emph{atminv}. The vignette itself is not `polished', but gives the basic requirements for reproducing the figures and values given in the main text.
@@ -212,6 +220,7 @@ We will now set up our simulation. Here we will only be concerned with the model
 ###------------------
 load_results  <- 1  # For quick vignette build
 cache_results <- 0  # Development only
+save_images <-   0  # Development only
 model = "full"  ## Either sparse or full or full_big or diag
 misspecification = 0
 #set.seed(25)        # deprecated, ignore
@@ -506,7 +515,8 @@ if(model == "full") {
         scale_linetype_discrete(guide=guide_legend(title="process"),
                                 labels=c("Yf (g/s/degree)","Ym (ppb)")) +
         xlab("s (degrees)")
-    ggsave(g,filename = "../../Sim_plot.png",width=10,height=4)
+    if(save_images) 
+      ggsave(g,filename = "../../Sim_plot.png",width=10,height=4)
 }
 @
 
@@ -659,7 +669,8 @@ if(model == "full") {
     theme(panel.margin = unit(1.5, "lines")) + 
     xlab("u (degrees)") + 
     ylab("t (2 h steps)")
-  ggsave(filename = "../../B_plot.png",width=12)
+  if(save_images) 
+    ggsave(filename = "../../B_plot.png",width=12)
 }
 @
 
@@ -818,9 +829,10 @@ if(load_results) {
                 fine_tune_E = (i==0))
   }
 }
-if(cache_results & model == "full_big")
+if(cache_results & model == "full_big") {
     X$lap_approx <- NULL # Save space
     save(X,file=paste0("../inst/extdata/",filename))
+}
 @
 
 \noindent The final parameter estimates are given by
@@ -982,7 +994,7 @@ g <- LinePlotTheme() +
             aes(as.factor(s),z),linetype="dashed") +
   coord_fixed(ratio = 0.03, ylim=c(0,1050)) + 
   ylab("Yf (g/s/degree)") + xlab("s (degrees)")
-if(!misspecification & model=="full") 
+if(!misspecification & model=="full" & save_images) 
   ggsave("../../Sim1_samples.png",plot = g,width=10)
 @
 
@@ -1013,7 +1025,7 @@ comp_density <- function(j,xu,xl=0,yu=0.01) {
         lty=2)
 }
 
-if(!misspecification & model=="full") {
+if(!misspecification & model=="full" & save_images) {
   png("../../density_sim1.png", width=4, height=4, units="in", res=300)
   comp_density(70,800,-200,yu=0.005); dev.off()
   png("../../density_sim10.png", width=4, height=4, units="in", res=300)
@@ -1069,7 +1081,7 @@ g <- LinePlotTheme() +
              aes(x=t,y = z),colour='black',size=3,shape=4)+
     ylab("Ym (ppb)") + xlab("t (2 h steps)")
 
-if(!misspecification & model=="full")
+if(!misspecification & model=="full" & save_images)
   ggsave("../../MF_samples.png",plot = g,width=10,height=3)
 @
 
