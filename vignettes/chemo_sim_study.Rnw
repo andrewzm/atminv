@@ -819,7 +819,8 @@ if(load_results) {
   }
 }
 if(cache_results & model == "full_big")
-    save(X,q,i,count,file=paste0("../inst/extdata/",filename))
+    X$lap_approx <- NULL # Save space
+    save(X,file=paste0("../inst/extdata/",filename))
 @
 
 \noindent The final parameter estimates are given by
