@@ -210,9 +210,9 @@ We will now set up our simulation. Here we will only be concerned with the model
 ###------------------
 ### Parameters
 ###------------------
-load_results  <- 0  # For quick vignette build
-cache_results <- 1  # Development only
-model = "full_big"  ## Either sparse or full or full_big or diag
+load_results  <- 1  # For quick vignette build
+cache_results <- 0  # Development only
+model = "full"  ## Either sparse or full or full_big or diag
 misspecification = 0
 #set.seed(25)        # deprecated, ignore
 ds <- 0.2            # 0.2 spacing. 
@@ -402,7 +402,7 @@ if(model %in% c("full","diag")) {
 
 Now we merge the observation data frame with the spaio-temporal grid and add the observation error, before sorting the data frame by time and space:
 
-<<>>=
+<<Qobs>>=
 s_obs <- s_obs %>%
             left_join(st_grid) %>%
             mutate(z = Ym + rnorm(n = length(Ym), 
@@ -981,7 +981,7 @@ g <- LinePlotTheme() +
             aes(as.factor(s),z),linetype="dashed") +
   coord_fixed(ratio = 0.03, ylim=c(0,1050)) + 
   ylab("Yf (g/s/degree)") + xlab("s (degrees)")
-if(!misspecification) 
+if(!misspecification & model=="full") 
   ggsave("../../Sim1_samples.png",plot = g,width=10)
 @
 
@@ -1012,7 +1012,7 @@ comp_density <- function(j,xu,xl=0,yu=0.01) {
         lty=2)
 }
 
-if(!misspecification) {
+if(!misspecification & model=="full") {
   png("../../density_sim1.png", width=4, height=4, units="in", res=300)
   comp_density(70,800,-200,yu=0.005); dev.off()
   png("../../density_sim10.png", width=4, height=4, units="in", res=300)
@@ -1068,7 +1068,7 @@ g <- LinePlotTheme() +
              aes(x=t,y = z),colour='black',size=3,shape=4)+
     ylab("Ym (ppb)") + xlab("t (2 h steps)")
 
-if(!misspecification) 
+if(!misspecification & model=="full")
   ggsave("../../MF_samples.png",plot = g,width=10,height=3)
 @
 
