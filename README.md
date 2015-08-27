@@ -42,7 +42,7 @@ and select the vignette under `atminv`.
 Details
 -------
 
-Section 4.1 details three sub-experiments. The first is the vanilla case with no model misspecification. The second assumes model misspecification, specifically that the flux field is uncorrelated even though it is not. The third assumes no misspecification but uses 1000 observations and shows that the EM-Laplace algorithm can run even in this scenario. If you wish to run these three different scenarios please download the `.Rnw` file from the `vignettes` folder and `Compile PDF` in `RStudio`. Before doing so:
+Section 4.1 details three sub-experiments. The first is the vanilla case with no model misspecification. The second assumes model misspecification, specifically that the flux field is uncorrelated even though it is not. The third assumes no misspecification but uses 1000 observations and shows that the EM-Laplace algorithm can run even in this scenario. If you wish to run these three different scenarios please download the `.Rnw` file from the `vignettes`, load `RStudio` and set `Tools -> Global Options -> Sweave -> Weave Rnw files using knitr`, and then press `Compile PDF`. Before doing so:
 
 - To run the first case make sure `model = "full"` and `misspecification = 0`.
 - To run the second case make sure `model = "full"` and `misspecification = 1`.
