@@ -187,13 +187,13 @@ opts_knit$set(width=40)
 \maketitle
 
 \begin{abstract}
-Here we represent repdoducible code for the simulation study appearing in the paper `Spatio-temporal bivariate statistical models for atmospheric trace-gas inversion', Section 4.1. The code requires the installation of two in-house developed packages for this application, \emph{hmc} and \emph{atminv}. The vignette itself is not `polished', but gives the basic requirements for reproducing the figures and values given in the main text.
+Here we present repdoducible code for the simulation study appearing in the paper `Spatio-temporal bivariate statistical models for atmospheric trace-gas inversion', Section 4.1. The code requires the installation of two in-house developed packages for this application, \texttt{hmc} and \texttt{atminv}. The vignette itself is not `polished', but gives the basic requirements for reproducing the figures and values given in the main text.
 
 \end{abstract}
 
 \section{Setup}
 
-To run the simulation study, you need to first install the packages `atminv' and `hmc'. You can do this as follows:
+To run the simulation study, you need to first install the packages \texttt{atminv} and \texttt{hmc}. You can do this as follows:
 
 <<installPkgs,eval=FALSE>>=
 library(devtools)
@@ -201,7 +201,7 @@ install_github("andrewzm/hmc")
 install_github("andrewzm/atminv")
 @
 
-This only needs to be done once. Now that we have the development packages installed, we can now load the others that we will need. The first two, \texttt{ggplot2} and \texttt{grid} are plotting purposes. The package \texttt{dplyr} is used for fast table manipulation and for `piping' a sequence of commands. The package \texttt{Matrix} is needed for taking advantage of sparsity in some operations and \texttt{tidyr} is needed for rearranging tables. The package \texttt{gstat} is needed for variogram modelling of the flux field. Finally the in-house developed packages \texttt{hmc} and \texttt{atminv} are used for implementing the Hamiltonian Monte Carlo sampler and the EM algorithm for parameter estimation, respectively.
+This only needs to be done once. Now that we have the development packages installed, we can now load the others that we will need. The first two, \texttt{ggplot2} and \texttt{grid} are for plotting purposes. The package \texttt{dplyr} is used for fast table manipulation and for `piping' a sequence of commands. The package \texttt{Matrix} is needed for taking advantage of sparsity in some operations and \texttt{tidyr} is needed for rearranging tables. The package \texttt{gstat} is needed for variogram modelling of the flux field. Finally the in-house developed packages \texttt{hmc} and \texttt{atminv} are used for implementing the Hamiltonian Monte Carlo sampler and the EM algorithm for parameter estimation, respectively.
 
 <<loadPkgs,message=FALSE>>=
 library(ggplot2)
@@ -214,7 +214,7 @@ library(hmc)
 library(atminv)
 @
 
-We will now set up our simulation. Here we will only be concerned with the model `full' (`full\_big' analyses the case with 1000 observations and `diag' the case where the flux field is uncorrelated), which can be misspecified (\texttt{misspecification = 1}) or not (\texttt{misspecification = 0}). Recall the by misspecification here we imply that the flux field is indeed spatially correlated, but that we will model is as being uncorrelated. Below we set up the spatio-temporal grid and establish the parameters of the observation process and the mole-fraction discrepancy spatio-temporal field:
+We will now set up our simulation. Here we will only be concerned with the model `full' (`full\_big' analyses the case with 1000 observations and `diag' the case where the flux field is uncorrelated), which can be misspecified (\texttt{misspecification = 1}) or not (\texttt{misspecification = 0}). Recall the by misspecification here we imply that the flux field is indeed spatially correlated, but is modelled as being uncorrelated. Below we set up the spatio-temporal grid and establish the parameters of the observation process and the mole-fraction discrepancy spatio-temporal field:
 
 
 <<ST-grid>>=
@@ -266,16 +266,12 @@ Now we are ready to create a stochastic process, the realisations of which exhib
 \begin{equation*}                                                                                               J(s,u) \equiv \left\{ \begin{array}{ll} I[(u-s) \ge 0]; & \upsilon_t(s) \ge 0, \\                                                                                                                              
                                         I[(u-s) \le 0]; & \upsilon_t(s) < 0,                                    \end{array}\right.                                                                                                                                                                                             
 \end{equation*}
-where $\upsilon_t(s)$ from a Gaussian process with separable spatio-temporal covariance structure and $I(\cdot)$ is the indicator function. In \eqref{eq:bt}, the exponential function describes a bell-shaped curve centred at $u = s$, while the indicator function truncates this curve at $u = s \pm \upsilon_t(s)$. The third term, $J(s,u)$, then truncates the bottom half of the function if $\upsilon_t(s) \ge 0$ and the upper half otherwise. The function $(s,u\mid  \upsilon_t(s))$ is implemented as follows
+where $\upsilon_t(s)$ is generated from a Gaussian process with separable spatio-temporal covariance structure and $I(\cdot)$ is the indicator function. In \eqref{eq:bt}, the exponential function describes a bell-shaped curve centred at $u = s$, while the indicator function truncates this curve at $u = s \pm \upsilon_t(s)$. The third term, $J(s,u)$, then truncates the bottom half of the function if $\upsilon_t(s) \ge 0$ and the upper half otherwise. The function $b_t(s,u\mid  \upsilon_t(s))$ is implemented as follows
 
 <<bfun>>=
 ###------------------
 ### Transition kernel 
 ###------------------
-# p is a ST process and reflects the std of the truncated Gaussian.
-# This problem ONLY works if b is of relatively local scope. Once we 
-# have b which has a very large scope we get oscillations/instability
-
 b <- function(s,u,p) {
   absp <- max(abs(p),0.2)
   absp*sqrt(2*pi) * dnorm(u,mean = s, sd =absp) *
@@ -307,6 +303,9 @@ data(sim.Random.seed)
 #load("~/Desktop/Chemometrics_results/sim.Random.seed.rda")
 
 # Now simulate this parameter by sampling from the GMRF
+# p is a ST process and reflects the std of the truncated Gaussian.
+# This problem ONLY works if b is of relatively local scope. Once we 
+# have b which has a very large scope we get oscillations/instability
 st_grid$p <- sample_GMRF(G,reps = 1)
 @
 
@@ -317,7 +316,7 @@ print(LinePlotTheme() +
         scale_fill_gradient2(low="blue",high="red",mid="white")
       )
 @
-\noindent the result of which is depicted in Figure \ref{fig:upsilon}
+\noindent the result of which is depicted in Figure \ref{fig:upsilon}.
 
 \begin{figure}
 \begin{center}
@@ -328,7 +327,7 @@ print(LinePlotTheme() +
       )
 @
 \end{center}
-\caption{The parameter $\upsilon_t(s)$ simulated from the separable spatio-temporal process}
+\caption{The parameter $\upsilon_t(s)$ simulated from the separable spatio-temporal process.}
 \label{fig:upsilon}
 \end{figure}
 
@@ -347,7 +346,7 @@ for( i in 1 : nrow(Z)) {
 
 \subsection{Simulating the flux field}
 
-Now that we have the parameters in place, we can simulate our dataset. We first re-set the seed to `1', then construct a semi-variogram with the parameters identical to those estimated from the Emissions data, before simulating our vector $\Yvec_f$:
+Now that we have the parameters in place, we can simulate our dataset. We first re-set the seed to `1', then construct a semi-variogram with the parameters identical to those estimated from the emissions data, before simulating our vector $\Yvec_f$:
 
 <<sim-Yf>>=
 ###------------------
@@ -376,7 +375,7 @@ if(misspecification)  {               # If we are assuming misspecification
 
 \subsection{Simulating the mole fraction field}
 
-Since the spatio-temporal discrepancy term can be hard to simulate from withour further approximations, we will just simulate it at the observation locations. Therefore, the mole fraction (excluding the discrepancy) is just a linear transformation of the flux field. For each space-time location we find the SRR between the whole domain (the source) and that point (the receptor) and multiply it by the the flux in the that gridcell:
+Since the spatio-temporal discrepancy term can be hard to simulate without further approximations, we will just simulate it at the observation locations. Therefore, the mole fraction (excluding the discrepancy) is just a linear transformation of the flux field. For each space-time location we find the SRR between the whole domain (the source) and that point (the receptor) and multiply it by the flux field:
 
 <<>>=
 ###------------------
@@ -683,7 +682,7 @@ if(model == "full") {
 if(model == "full") print(B_plot)
 @
 \end{center}
-\caption{ The source-receptor relationship $b_t(s,u)$ synthesised at five observation locations $s \in D^O_m = \{-5.3^\circ, -4.5^\circ,-3.9^\circ,-3.7^\circ,-0.1^\circ \}$. Note that $b_t(s,u) = 0$ for $u > 4.3$}
+\caption{ The source-receptor relationship $b_t(s,u)$ synthesised at five observation locations $s \in D^O_m = \{-5.3^\circ, -4.5^\circ,-3.9^\circ,-3.7^\circ,-0.1^\circ \}$. Note that $b_t(s,u) = 0$ for $u > 4.3$.}
 \label{fig:B}
 \end{figure}
 
@@ -756,7 +755,7 @@ In this section we show the code for carrying inference on the bivariate field $
 mu_f <- matrix(exp(mu_f_log + 0.5*diag(S_f_log)))
 @
 
-We then set the settings for the Laplace approximation. These vary accoring to the model being used. For the model `full', we alter the matrices so that the validation point is excluded. :
+We then set the settings for the Laplace approximation. These vary accoring to the model being used. For the model `full', we alter the matrices so that the validation point is excluded.
 
 <<EM-settings>>=
 ###-----------------------------------------------------
@@ -872,7 +871,8 @@ In this section we show the code for the HMC sampler, that fixes the parameters 
 
 <<cov-compute>>=
 if(model == "full") {
-  corr_zeta <- corr_zeta_fn(c(s_obs$s[1:(m_obs-1)],new_obs),t_axis,X$theta[2,n_EM],X$theta[3,n_EM])
+  corr_zeta <- corr_zeta_fn(c(s_obs$s[1:(m_obs-1)],new_obs),
+                            t_axis,X$theta[2,n_EM],X$theta[3,n_EM])
   S_zeta <- X$theta[1,n_EM] * corr_zeta
   Q_zeta <- chol2inv(chol(S_zeta))
 }
