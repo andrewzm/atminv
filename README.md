@@ -34,7 +34,7 @@ To install the `atminv` package and the other dependencies, please make sure you
 If you do not wish to compile the vignette (which takes a while) please set `build_vignettes=F` above. Otherwise, to view the vignette please type
 
     library(atminv)
-    vignette()
+    vignette("chemo_sim_study")
     
 and select the vignette under `atminv`.
 
