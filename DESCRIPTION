@@ -7,7 +7,11 @@ Date: 2015-08-27
 Authors@R: c(person("Andrew", "Zammit-Mangion", role = c("aut", "cre"),
     email = "andrewzm@gmail.com"))
 Suggests:
-    knitr
+    knitr,
+    grid,
+    dplyr,
+    tidyr,
+    gstat
 Imports:
     Matrix,
     ggplot2
