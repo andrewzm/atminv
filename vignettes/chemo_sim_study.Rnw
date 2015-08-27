@@ -1,5 +1,8 @@
 \documentclass[a4paper,11pt]{article}
  
+%\VignetteEngine{knitr::knitr} 
+%\VignetteIndexEntry{Reproducible code for Section 4.1}
+ 
 \usepackage{hyperref}
 \usepackage{graphicx}
 \usepackage{amssymb,amsmath}
@@ -168,14 +171,14 @@
 \newcommand{\bSigma}{\bm{\Sigma}}
 
 
+
+ 
+\begin{document}
+
  <<include=FALSE>>=
 library(knitr)
 opts_knit$set(width=40)
 @
- 
- 
- 
-\begin{document}
 
 \title{Reproducible code for Section 4.1 of `Spatio-temporal bivariate statistical models for atmospheric trace-gas inversion'}
 
@@ -857,7 +860,7 @@ par(mfrow=c(1,1))
 \end{figure}
 
 
-<<startcomment, results='asis', echo=FALSE>>=
+<<startcomment, results="asis", echo=FALSE>>=
 if(model=="full_big"){
   cat("\\begin{comment}")
 }
@@ -1109,7 +1112,7 @@ post_unc <- apply(mf_samp[rm_idx,],1,var)
 print(paste0("S1m = ", sqrt(mean(residual^2))))
 @
 
-<<endcomment, results='asis', echo=FALSE>>=
+<<endcomment, results="asis", echo=FALSE>>=
 if(model=="full_big"){
   cat("\\end{comment}")
 }

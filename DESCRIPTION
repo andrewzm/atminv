@@ -1,12 +1,21 @@
 Package: atminv
 Type: Package
-Title: What the package does (short line)
-Version: 1.0
-Date: 2015-02-01
-Author: Who wrote it
+Title: Reproducible package for Section 4.1 of "Spatio-temporal bivariate statistical models for atmospheric trace-gas inversion"
+Description: See README.md on github pages
+Version: 0.1.0
+Date: 2015-08-27
+Authors@R: c(person("Andrew", "Zammit-Mangion", role = c("aut", "cre"),
+    email = "andrewzm@gmail.com"))
+Suggests:
+    knitr
 Imports:
     Matrix,
     ggplot2
-Maintainer: Who to complain to <yourfault@somewhere.net>
-Description: More about what it does (maybe more than one line)
-License: What license is it under?
+VignetteBuilder: knitr
+License: GPL (>= 2)
+NeedsCompilation: no
+URL: http://github.com/andrewzm/atminv
+BugReports: http://github.com/andrewzm/atminv/issues
+
+
+

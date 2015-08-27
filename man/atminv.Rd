@@ -6,6 +6,6 @@
 \alias{atminv-package}
 \title{atminv}
 \description{
-Atminv
+Reproducible package for Section 4.1 of "Spatio-temporal bivariate statistical models for atmospheric trace-gas inversion"
 }
 
