@@ -41,3 +41,11 @@ setClass("GMRF",contains="process",
 #' a first-order auto-regressice structure. All random walks are intrinsic GMRFs.
 #' @rdname GMRF_RWclass
 setClass("GMRF_RW",contains="GMRF")
+
+#'  @docType class
+#'  @title observation block
+#'
+#' @description An observation block inherits from class \code{block}, however can only be used in certain ways in a graph. For example it can be linked to an observation
+#' process block but not to another observation block. To initialise use \code{initObs}.
+#' @rdname Obsclass
+setClass("Obs",contains=c("block"),representation(df="data.frame",args="list"))

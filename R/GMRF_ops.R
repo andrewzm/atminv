@@ -82,6 +82,74 @@ GMRF_RW <- function(n = 10,order=1,precinc = 1,df=data.frame()) {
     return(new("GMRF",mu=mu,Q=Q,intrinsic=1,n=n,t_axis=0:(n-1),rep=df))
 }
 
+#' @title Observation block
+#' 
+#' @description This function initialises an object of class \code{Obs} which defines a an observation data set. By default, this is for observations with negligible spatial footprint. For larger supports, use \code{Obs_poly}. 
+#'
+#' @param df a data frame which should contain at least 5 entries, \code{x,y,t,z} and \code{std} which denote the horizontal, vertical and temporal indices of the observations, the value and error respectively. Alternatively this could be a path name.
+#' @param name the name of the observation process
+#' @param remove_cross_ins removes data outside a circle centred at zero with specified radius. Convenient when working with satellite data in polar stereographic projection when some cross-ins are detected.
+#' @param ... other arguments passed on to \code{preprocess_obs}
+#' @return Object of class \code{Obs} (which inherits from class \code{block} and is thus also a block)
+#' @keywords Observations, change of support, block
+#' @export
+#' @examples
+#' O <- Obs(df=data.frame(x=runif(5),y=runif(5),t=c(1,1,1,2,2),z=runif(5),std=runif(5)))
+#' print(O)
+#' plot(subset(O,t==1),"z",pt_size=4)
+Obs <- function(df,name="Obs",remove_cross_ins=0,...) {
+    return(new("Obs",df=df,name=name,remove_cross_ins=remove_cross_ins,...))
+}
+
+
+# ... is passed on to preprocess_obs
+setMethod("initialize",signature="Obs",function(.Object,df,name=NA,remove_cross_ins=0,pol=NA,alpha0=NA,av_dist=NA,...) { 
+    
+    args<-list(...)
+    args <- c(args,df=df,name=name,remove_cross_ins=remove_cross_ins,pol=pol,alpha0=alpha0,av_dist=av_dist)
+    .Object@args <- args
+    
+    stopifnot((is.character(df)) | is.data.frame(df))
+    
+    if(is.character(df)) {
+        cat(paste("Loading from",df),sep="\n")
+        data_df <- read.table(df,header=T)    
+    } else {
+        data_df <- df 
+    }
+    
+    .Object@df <- data_df
+    .Object <- preprocess_obs(.Object,...)
+    if (is.null(data_df$obs_name))
+        .Object["obs_name"] <- as.factor(name)
+    if(remove_cross_ins > 0) {
+        .Object@df <- subset(.Object@df,sqrt(x^2 + y^2) > remove_cross_ins)
+    }
+    
+    if(!is.na(pol[1])) {
+        poly_points <- pol
+        if (!("id" %in% names(.Object@df))) stop("Need to merge by id field which is not supplied")
+        .Object@df <- merge(poly_points,.Object@df,by=c("id","t"))
+        .Object@df <- arrange(.Object@df,id,t)
+        .Object@df2 <- .expand_poly(.Object@df)
+    }
+    .Object@df$n <- 1:nrow(.Object@df)
+    .Object@n <- nrow(.Object@df)
+    
+    if("cmweq" %in% names(.Object@df)) {
+        .Object@df$z <-  as.numeric(.Object@df$cmweq)*0.01*.Object@df$area2    #Convert to Mt
+        .Object@df2$z <-  as.numeric(.Object@df2$cmweq)*0.01*.Object@df2$area2    #Convert to Mt
+        .Object@df$std <-  as.numeric(.Object@df$std)*0.01*.Object@df$area2    #Convert to Mt
+        .Object@df2$std <-  as.numeric(.Object@df2$std)*0.01*.Object@df2$area2    #Convert to Mt 
+    }
+    
+    
+    if(!is.na(alpha0)) {
+        if(is.na(alpha0)) stop("Cannot specify alpha0 without averaging distance")
+        .Object@args$P <-  Find_Smooth_mat(subset(.Object@df,t==0),alpha0,av_dist)
+    }
+    
+    callNextMethod(.Object)})
 
 #### Sample GMRF ###########
 #' @title Sample from a GMRF
@@ -117,4 +185,100 @@ setMethod("sample_GMRF",signature="GMRF",function(G,L=NULL,reps=1,P=NULL) {
         x <- mu + v
     }
     ifelse(reps==1, return(as.vector(x)), return(x))
+})
+
+#' @title Pre-processes observations
+#' @description This function simply takes a data frame and performs standard pre-processing functions such as removing obvious outliers and averaging data
+#' in computationally efficient way over a regular grid
+#'
+#' @param Obs.obj The observation object
+#' @param std_lim Values with error higher than \code{std_lim} are deleted
+#' @param abs_lim Values which are bigger than \code{abs_lim} are deleted
+#' @param avr_method If \code{mean} then the mean value and mean error on a sub-grid are used to sub-sample the observations. If \code{median} the median value and MAD of the z-values are used
+#' for subsampling. If \code{mean_no_std} or \code{median_no_std}, the error is not computed ignored.
+#' @param box_size The grid width over which the observations are averaged
+#' @param min_pts If a grid box contains less than \code{min_pts} it is marked as empty
+#' @param ... Other parameters which are ignored
+#' @export
+preprocess_obs <- function(Obs.obj,std_lim=NA,abs_lim=NA,avr_method=NA,box_size=10,min_pts=4,...) {
+    
+    if(!(is.na(std_lim))) {
+        stopifnot(is.numeric(std_lim))
+        Obs.obj@df <- subset(Obs.obj@df,std < std_lim)
+    }
+    
+    if (!is.na(abs_lim)) {
+        stopifnot(is.numeric(abs_lim))
+        Obs.obj@df <- subset(Obs.obj@df,abs(z) < abs_lim)
+    }
+    
+    if(any(Obs.obj@df$std == 0)) {
+        warning("Data points with zero error detected. These are automatically deleted")
+        Obs.obj@df <- subset(Obs.obj@df,std > 0)
+    }
+    
+    
+    if(!is.na(avr_method)) {
+        stopifnot(avr_method %in% c("mean","median","mean_no_std","median_no_std"))
+        
+        breaksx <- seq(min(Obs.obj@df$x)-1,max(Obs.obj@df$x)+1,by=box_size)
+        breaksy <- seq(min(Obs.obj@df$y)-1,max(Obs.obj@df$y)+1,by=box_size)
+        Obs.obj@df$box_x <- cut(Obs.obj@df$x,breaksx,labels=F)
+        Obs.obj@df$box_y <- cut(Obs.obj@df$y,breaksy,labels=F) 
+        
+        
+        averaging_fun <- function(z) {
+            x <- z[1]  
+            if(length(z) > min_pts) {
+                if(avr_method %in% c("median","median_no_std")) {
+                    x <- median(z)
+                } else if(avr_method  %in% c("mean","mean_no_std") ) {
+                    x <- mean(z)
+                }
+            }
+            return(x)
+        }
+        
+        std_fun <- function(z,std) {
+            x <- std[1]  
+            if(length(z) > 4) {
+                if(avr_method=="median") {
+                    x <- mad(z)
+                } else if(avr_method=="mean") {
+                    x <- sd(z)
+                }
+            }
+            return(x)
+        }
+        
+        boxes <- group_by(Obs.obj@df, box_x,box_y,t)
+        if(avr_method %in% c("median","mean")) { 
+            Obs.obj@df <- data.frame(summarise(boxes,x=round(mean(x)),y=round(mean(y)),z2=averaging_fun(z),std=std_fun(z,std)))
+        } else if(avr_method %in% c("median_no_std","mean_no_std")) {
+            Obs.obj@df <- data.frame(summarise(boxes,x=round(mean(x)),y=round(mean(y)),z2=averaging_fun(z)))
+        }
+        Obs.obj@df$z <- Obs.obj@df$z2
+        Obs.obj@df$z2 <- NULL
+        
+        Obs.obj@df <- arrange(Obs.obj@df,t)
+        Obs.obj@n <- 1:nrow(Obs.obj@df)
+    }  
+    return(Obs.obj)
+}
+
+setMethod("[",signature = "GMRF",function(x,i,j) { return(x@rep[i][,])})
+
+#' @aliases [<-,GMRF,ANY,ANY-method
+#' @export
+setMethod("[<-",signature = "GMRF",function(x,i,j,value) {
+    x@rep[i] <- value
+    return(x)
+})
+setMethod("[",signature = "Obs",function(x,i,j) { return(x@df[i][,])})
+
+#' @aliases [<-,Obs,ANY,ANY-method
+#' @export
+setMethod("[<-",signature = "Obs",function(x,i,j,value) {
+    x@df[i] <- value
+    return(x)
 })

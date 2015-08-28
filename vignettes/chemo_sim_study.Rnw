@@ -518,7 +518,7 @@ if(model == "full") {
                                 labels=c("Yf (g/s/degree)","Ym (ppb)")) +
         xlab("s (degrees)")
     if(save_images) 
-      ggsave(g,filename = "../../Sim_plot.png",width=10,height=4)
+      ggsave(g,filename = "../img/Sim_plot.png",width=10,height=4)
 }
 @
 
@@ -536,7 +536,6 @@ if(model == "full") print(g)
 <<deprecated-old-plot,include=FALSE,eval=FALSE>>=
 ## Old plot, deprecated
 if(model == "full") {
-    source("../../R/ggplot_dual_axis.R")
     g1 <- LinePlotTheme() + geom_line(data=subset(X,!(s==new_obs) & process=="Yf"),aes(x=s,y=value)) + ylab("Yf (g/s/degree)") + theme(text = element_text(size=15),axis.title.y=element_text(vjust=0.6)) + xlab("s (degrees)")
     g2 <- LinePlotTheme() + geom_line(data=subset(X,!(s==new_obs) & process=="Ym_av"),aes(x=s,y=value),linetype="dashed") + ylim(0,900) + theme(text = element_text(size=15),axis.title.y=element_text(vjust=0.6)) +
         geom_segment(data=s_obs[1:5,],aes(x=s, xend=s, y = 0, yend = 50),
@@ -672,7 +671,7 @@ if(model == "full") {
     xlab("u (degrees)") + 
     ylab("t (2 h steps)")
   if(save_images) 
-    ggsave(filename = "../../B_plot.png",width=12)
+    ggsave(filename = "../img/B_plot.png",width=12)
 }
 @
 
@@ -998,7 +997,7 @@ g <- LinePlotTheme() +
   coord_fixed(ratio = 0.03, ylim=c(0,1050)) + 
   ylab("Yf (g/s/degree)") + xlab("s (degrees)")
 if(!misspecification & model=="full" & save_images) 
-  ggsave("../../Sim1_samples.png",plot = g,width=10)
+  ggsave("../img/Sim1_samples.png",plot = g,width=10)
 @
 
 
@@ -1029,9 +1028,9 @@ comp_density <- function(j,xu,xl=0,yu=0.01) {
 }
 
 if(!misspecification & model=="full" & save_images) {
-  png("../../density_sim1.png", width=4, height=4, units="in", res=300)
+  png("../img/density_sim1.png", width=4, height=4, units="in", res=300)
   comp_density(70,800,-200,yu=0.005); dev.off()
-  png("../../density_sim10.png", width=4, height=4, units="in", res=300)
+  png("../img/density_sim10.png", width=4, height=4, units="in", res=300)
   comp_density(24,400,50,yu=0.014); dev.off()
 }
 @
@@ -1085,7 +1084,7 @@ g <- LinePlotTheme() +
     ylab("Ym (ppb)") + xlab("t (2 h steps)")
 
 if(!misspecification & model=="full" & save_images)
-  ggsave("../../MF_samples.png",plot = g,width=10,height=3)
+  ggsave("../img/MF_samples.png",plot = g,width=10,height=3)
 @
 
 \begin{figure}[!ht]
