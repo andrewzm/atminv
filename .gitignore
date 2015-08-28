@@ -1,3 +1,6 @@
 .Rproj.user
 .Rhistory
 .RData
+*~
+*.log
+vignettes/chemo_sim_study-concordance.tex
