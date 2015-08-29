@@ -13,10 +13,13 @@ To download the vignette without reproducing it on your machine, please view it 
 [Vignette (Section 4.1)](https://github.com/andrewzm/atminv/blob/master/vignettes/chemo_sim_study.pdf?raw=true)
 
 
-Presentation
+Presentations
 -----
 
-To access the presentation I gave for the 27th Goulburn Research Fellows Meeting (2015) that contained some slides on this topic, please [click here](https://github.com/andrewzm/bicon/blob/master/pres/2015_03_Goulburn.pdf?raw=true).
+The presentation I gave for the 27th Goulburn Research Fellows Meeting (2015) that is mostly focused on bivariate conditional models but that also contains some slides on this topic is [here](https://github.com/andrewzm/bicon/blob/master/pres/2015_03_Goulburn.pdf?raw=true).
+
+The presentation I gave in the Spatial Statistics Conference in Avignon (2015) that is centred around this work is [here](https://github.com/andrewzm/bicon/blob/master/pres/2015_06_Zammit.pdf?raw=true).
+
 
 
 Reproducibility 

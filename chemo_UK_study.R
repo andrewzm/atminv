@@ -620,7 +620,7 @@ EM_alg <- EM(s_obs = s_obs_train, # use training data observations
 
 ## Now that EM_alg is setup we iterate through it
 if(!load_results) {
-    for(i in 1:n_EM) {
+    for(i in 1:(n_EM-2)) {
         X <-  EM_alg(max_E_it = 1e6,  # max E steps (very high)
                      max_M_it = 10,   # max M steps (comp. intensive, keep low)
                      fine_tune_E = (i %in% c(1,2,8)))  # fine-tune these steps 

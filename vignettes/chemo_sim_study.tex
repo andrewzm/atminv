@@ -276,7 +276,7 @@ We will now set up our simulation. Here we will only be concerned with the model
 \hlcom{###------------------}
 \hlstd{load_results}  \hlkwb{<-} \hlnum{1}  \hlcom{# For quick vignette build}
 \hlstd{cache_results} \hlkwb{<-} \hlnum{0}  \hlcom{# Development only}
-\hlstd{save_images} \hlkwb{<-}   \hlnum{1}  \hlcom{# Development only}
+\hlstd{save_images} \hlkwb{<-}   \hlnum{0}  \hlcom{# Development only}
 \hlstd{model} \hlkwb{=} \hlstr{"full"}  \hlcom{## Either sparse or full or full_big or diag}
 \hlstd{misspecification} \hlkwb{=} \hlnum{0}
 \hlcom{#set.seed(25)        # deprecated, ignore}
@@ -396,7 +396,7 @@ If we want we can take a look at what the realisation of the parameter $\upsilon
       \hlstd{)}
 \end{alltt}
 \end{kframe}
-\includegraphics[width=\maxwidth]{figure/upsilon-plot2} 
+\includegraphics[width=\maxwidth]{figure/upsilon-plot2-1} 
 
 \end{knitrout}
 \end{center}
@@ -424,7 +424,7 @@ Now that we have the parameters in place, we can simulate our dataset. We first 
                        \hlkwc{psill} \hlstd{=} \hlnum{0.80429}\hlstd{,}
                        \hlkwc{model}\hlstd{=} \hlstr{"Sph"}\hlstd{)}
 \hlstd{S_f_log} \hlkwb{<-} \hlkwd{variogramLine}\hlstd{(variogram_model,} \hlcom{# Find covariance matrix Sigma_f}
-                         \hlkwc{dist_vector} \hlstd{= sp::}\hlkwd{spDists}\hlstd{(}\hlkwd{matrix}\hlstd{(s_axis),}
+                         \hlkwc{dist_vector} \hlstd{= sp}\hlopt{::}\hlkwd{spDists}\hlstd{(}\hlkwd{matrix}\hlstd{(s_axis),}
                                                  \hlkwd{matrix}\hlstd{(s_axis)),}
                           \hlkwc{covariance} \hlstd{=} \hlnum{TRUE}\hlstd{)}
 \hlstd{mu_f_log} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlkwd{rep}\hlstd{(}\hlnum{5}\hlstd{,}\hlkwd{length}\hlstd{(s_axis)))}        \hlcom{# Construct mu_f}
@@ -531,10 +531,10 @@ To add the discrepancy, we first compuate the spatio-temporal covariance matrix 
     \hlstd{C_m} \hlkwb{<-} \hlkwd{.symDiagonal}\hlstd{(}\hlkwd{nrow}\hlstd{(s_obs))}
 \hlstd{\}} \hlkwa{else if}\hlstd{(model} \hlopt{==} \hlstr{"full_big"}\hlstd{) \{}
 
-    \hlstd{corr_s_mat} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{theta_s}\hlstd{) atminv:::}\hlkwd{corr_s}\hlstd{(}\hlkwc{s} \hlstd{= s_axis,}\hlkwc{theta_s} \hlstd{= theta_s)}
-    \hlstd{corr_t_mat} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{theta_t}\hlstd{) atminv:::}\hlkwd{corr_t}\hlstd{(}\hlkwc{t} \hlstd{= t_axis,}\hlkwc{theta_t} \hlstd{= theta_t)}
-    \hlstd{d_corr_s_mat} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{theta_s}\hlstd{) atminv:::}\hlkwd{d_corr_s}\hlstd{(}\hlkwc{s} \hlstd{= s_axis,}\hlkwc{theta_s} \hlstd{= theta_s)}
-    \hlstd{d_corr_t_mat} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{theta_t}\hlstd{) atminv:::}\hlkwd{d_corr_t}\hlstd{(}\hlkwc{t} \hlstd{= t_axis,}\hlkwc{theta_t} \hlstd{= theta_t)}
+    \hlstd{corr_s_mat} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{theta_s}\hlstd{) atminv}\hlopt{:::}\hlkwd{corr_s}\hlstd{(}\hlkwc{s} \hlstd{= s_axis,}\hlkwc{theta_s} \hlstd{= theta_s)}
+    \hlstd{corr_t_mat} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{theta_t}\hlstd{) atminv}\hlopt{:::}\hlkwd{corr_t}\hlstd{(}\hlkwc{t} \hlstd{= t_axis,}\hlkwc{theta_t} \hlstd{= theta_t)}
+    \hlstd{d_corr_s_mat} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{theta_s}\hlstd{) atminv}\hlopt{:::}\hlkwd{d_corr_s}\hlstd{(}\hlkwc{s} \hlstd{= s_axis,}\hlkwc{theta_s} \hlstd{= theta_s)}
+    \hlstd{d_corr_t_mat} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{theta_t}\hlstd{) atminv}\hlopt{:::}\hlkwd{d_corr_t}\hlstd{(}\hlkwc{t} \hlstd{= t_axis,}\hlkwc{theta_t} \hlstd{= theta_t)}
 
     \hlstd{C_idx} \hlkwb{<-} \hlstd{st_grid} \hlopt{%>%}
       \hlkwd{as.data.frame}\hlstd{()} \hlopt{%>%}
@@ -599,7 +599,7 @@ Here we provide the code for generating the two plots in the paper (Figure 3). T
 \hlkwa{if}\hlstd{(model} \hlopt{==} \hlstr{"full"}\hlstd{)} \hlkwd{print}\hlstd{(g)}
 \end{alltt}
 \end{kframe}
-\includegraphics[width=\maxwidth]{figure/YfYm-plot} 
+\includegraphics[width=\maxwidth]{figure/YfYm-plot-1} 
 
 \end{knitrout}
 \end{center}
@@ -624,7 +624,7 @@ The second, in Figure \ref{fig:B}, shows the SRR at each observation location:
 \hlstd{\}}
 
 \hlcom{# TRUE B}
-\hlstd{B_true} \hlkwb{<-} \hlstd{plyr::}\hlkwd{ddply}\hlstd{(df_for_B,}\hlkwd{c}\hlstd{(}\hlstr{"t"}\hlstd{,}\hlstr{"s"}\hlstd{),}\hlkwa{function}\hlstd{(}\hlkwc{df}\hlstd{) \{}
+\hlstd{B_true} \hlkwb{<-} \hlstd{plyr}\hlopt{::}\hlkwd{ddply}\hlstd{(df_for_B,}\hlkwd{c}\hlstd{(}\hlstr{"t"}\hlstd{,}\hlstr{"s"}\hlstd{),}\hlkwa{function}\hlstd{(}\hlkwc{df}\hlstd{) \{}
   \hlstd{b} \hlkwb{=} \hlkwd{b}\hlstd{(}\hlkwc{s}\hlstd{=df}\hlopt{$}\hlstd{s[}\hlnum{1}\hlstd{],}\hlkwc{u}\hlstd{=s_axis,}\hlkwc{p}\hlstd{=df}\hlopt{$}\hlstd{p[}\hlnum{1}\hlstd{])\})} \hlopt{%>%}
   \hlkwd{select}\hlstd{(}\hlopt{-}\hlstd{s,}\hlopt{-}\hlstd{t)} \hlopt{%>%}
   \hlkwd{as.matrix}\hlstd{()}\hlopt{*}\hlstd{ds}
@@ -634,7 +634,7 @@ The second, in Figure \ref{fig:B}, shows the SRR at each observation location:
   \hlstd{B} \hlkwb{<-} \hlkwd{as}\hlstd{(B,}\hlstr{"dgCMatrix"}\hlstd{)}
 \hlstd{\}}
 
-\hlstd{B_true_df} \hlkwb{<-} \hlstd{plyr::}\hlkwd{ddply}\hlstd{(df_for_B,}\hlkwd{c}\hlstd{(}\hlstr{"t"}\hlstd{,}\hlstr{"s"}\hlstd{),}\hlkwa{function}\hlstd{(}\hlkwc{df}\hlstd{) \{}
+\hlstd{B_true_df} \hlkwb{<-} \hlstd{plyr}\hlopt{::}\hlkwd{ddply}\hlstd{(df_for_B,}\hlkwd{c}\hlstd{(}\hlstr{"t"}\hlstd{,}\hlstr{"s"}\hlstd{),}\hlkwa{function}\hlstd{(}\hlkwc{df}\hlstd{) \{}
   \hlstd{b} \hlkwb{=} \hlkwd{b}\hlstd{(}\hlkwc{s}\hlstd{=df}\hlopt{$}\hlstd{s[}\hlnum{1}\hlstd{],}\hlkwc{u}\hlstd{=s_axis,}\hlkwc{p}\hlstd{=df}\hlopt{$}\hlstd{p[}\hlnum{1}\hlstd{])\})} \hlopt{%>%}
   \hlkwd{gather}\hlstd{(s_grid,b,}\hlopt{-}\hlstd{t,}\hlopt{-}\hlstd{s)} \hlopt{%>%}
   \hlkwd{separate}\hlstd{(s_grid,} \hlkwc{into} \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{"V"}\hlstd{,}\hlstr{"s_fine"}\hlstd{),}\hlkwc{sep}\hlstd{=}\hlstr{"V"}\hlstd{)} \hlopt{%>%}
@@ -681,7 +681,7 @@ The second, in Figure \ref{fig:B}, shows the SRR at each observation location:
 \hlkwa{if}\hlstd{(model} \hlopt{==} \hlstr{"full"}\hlstd{)} \hlkwd{print}\hlstd{(B_plot)}
 \end{alltt}
 \end{kframe}
-\includegraphics[width=\maxwidth]{figure/B-plot} 
+\includegraphics[width=\maxwidth]{figure/B-plot-1} 
 
 \end{knitrout}
 \end{center}
@@ -798,7 +798,7 @@ To iterate the E- and M-steps we simply put the returned function in a loop, and
 \hlstd{X}\hlopt{$}\hlstd{theta[,n_EM}\hlopt{-}\hlnum{1}\hlstd{]}
 \end{alltt}
 \begin{verbatim}
-## [1] 1964.9329    0.7136    0.7722
+## [1] 1964.9329277    0.7135804    0.7721958
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -815,7 +815,7 @@ To iterate the E- and M-steps we simply put the returned function in a loop, and
 \hlkwd{plot}\hlstd{(X}\hlopt{$}\hlstd{theta[}\hlnum{3}\hlstd{,])}
 \end{alltt}
 \end{kframe}
-\includegraphics[width=\maxwidth]{figure/EM-plot} 
+\includegraphics[width=\maxwidth]{figure/EM-plot-1} 
 
 \end{knitrout}
 \end{center}
@@ -955,7 +955,7 @@ In this section we show the code used to generate the results. First, we put the
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
  \hlstd{Q} \hlkwb{<-} \hlkwd{as.data.frame}\hlstd{(}\hlkwd{t}\hlstd{(q[}\hlnum{1}\hlopt{:}\hlkwd{length}\hlstd{(X}\hlopt{$}\hlstd{ind),}\hlopt{-}\hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlnum{1000}\hlstd{,i)]))} \hlopt{%>%}
-  \hlstd{tidyr::}\hlkwd{gather}\hlstd{(t,z)} \hlopt{%>%}
+  \hlstd{tidyr}\hlopt{::}\hlkwd{gather}\hlstd{(t,z)} \hlopt{%>%}
   \hlkwd{separate}\hlstd{(t,} \hlkwc{into}\hlstd{=}\hlkwd{c}\hlstd{(}\hlstr{"V"}\hlstd{,}\hlstr{"s"}\hlstd{),}\hlkwc{sep}\hlstd{=}\hlstr{"V"}\hlstd{)} \hlopt{%>%}
   \hlkwd{select}\hlstd{(}\hlopt{-}\hlstd{V)} \hlopt{%>%}
   \hlkwd{mutate}\hlstd{(}\hlkwc{s} \hlstd{= s_axis[}\hlkwd{as.numeric}\hlstd{(s)])}
@@ -983,9 +983,7 @@ In this section we show the code used to generate the results. First, we put the
 \hlkwa{if}\hlstd{(}\hlopt{!}\hlstd{misspecification} \hlopt{&} \hlstd{model}\hlopt{==}\hlstr{"full"} \hlopt{&} \hlstd{save_images)}
   \hlkwd{ggsave}\hlstd{(}\hlstr{"../img/Sim1_samples.png"}\hlstd{,}\hlkwc{plot} \hlstd{= g,}\hlkwc{width}\hlstd{=}\hlnum{10}\hlstd{)}
 \end{alltt}
-
-
-{\ttfamily\noindent\itshape\color{messagecolor}{\#\# Saving 10 x 7 in image}}\end{kframe}
+\end{kframe}
 \end{knitrout}
 
 
@@ -997,7 +995,7 @@ In this section we show the code used to generate the results. First, we put the
 \hlkwd{print}\hlstd{(g)}
 \end{alltt}
 \end{kframe}
-\includegraphics[width=\maxwidth]{figure/HMC-plot} 
+\includegraphics[width=\maxwidth]{figure/HMC-plot-1} 
 
 \end{knitrout}
 \end{center}
@@ -1030,10 +1028,6 @@ We now compare the Laplace approximation of the flux field to the distribution g
   \hlkwd{comp_density}\hlstd{(}\hlnum{24}\hlstd{,}\hlnum{400}\hlstd{,}\hlnum{50}\hlstd{,}\hlkwc{yu}\hlstd{=}\hlnum{0.014}\hlstd{);} \hlkwd{dev.off}\hlstd{()}
 \hlstd{\}}
 \end{alltt}
-\begin{verbatim}
-## pdf 
-##   2
-\end{verbatim}
 \end{kframe}
 \end{knitrout}
 
@@ -1048,7 +1042,7 @@ We now compare the Laplace approximation of the flux field to the distribution g
 \hlkwd{comp_density}\hlstd{(}\hlnum{24}\hlstd{,}\hlnum{400}\hlstd{,}\hlnum{50}\hlstd{,}\hlkwc{yu}\hlstd{=}\hlnum{0.014}\hlstd{);}
 \end{alltt}
 \end{kframe}
-\includegraphics[width=\maxwidth]{figure/unnamed-chunk-7} 
+\includegraphics[width=\maxwidth]{figure/unnamed-chunk-7-1} 
 
 \end{knitrout}
 \caption{Laplace approximation (dashed line) and a histogram of the empirical posterior distribution from the MCMC samples for the flux at $s = 3.9^\circ$ (left panel) and $s = -5.3^\circ$ (right panel).} \label{fig:Lap_vs_mcmc}
@@ -1111,7 +1105,7 @@ Now that we have our mole-fraction samples we can plot the credibility intervals
 \hlkwd{print}\hlstd{(g)}
 \end{alltt}
 \end{kframe}
-\includegraphics[width=\maxwidth]{figure/unnamed-chunk-8} 
+\includegraphics[width=\maxwidth]{figure/unnamed-chunk-8-1} 
 
 \end{knitrout}
 \caption{Distributions of mole fraction at $s = 0.3^\circ$ and $t \in \mathcal{T}$, following Gibbs sampling. The dark and light shadings denote the interquartile and the 5--95 percentile ranges, respectively. The crosses denote the true (simulated) mole fractions.} \label{fig:MF}
@@ -1144,7 +1138,7 @@ Finally, we calculate the statistics $S_{1,f}$, $S_{2,f}$ and $S_{1,m}^{0.3}$ as
 \hlkwd{print}\hlstd{(}\hlkwd{paste0}\hlstd{(}\hlstr{"S1m = "}\hlstd{,} \hlkwd{sqrt}\hlstd{(}\hlkwd{mean}\hlstd{(residual}\hlopt{^}\hlnum{2}\hlstd{))))}
 \end{alltt}
 \begin{verbatim}
-## [1] "S1m = 32.4976489099931"
+## [1] "S1m = 32.4976489099932"
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
