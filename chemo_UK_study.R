@@ -18,8 +18,8 @@ library(hmc)     # https://github.com/andrewzm/hmc
 library(fitdistrplus)
 
 rm(list=ls())
-cache_results <- 1
-load_results  <- 0
+cache_results <- 0
+load_results  <- 1
 save_images   <- 1
 
 md5_wrapper <- md5_cache("~/cache/Assim") # set up cache
@@ -534,6 +534,9 @@ log_mu <- mean(log(Emissions$z))
 ## and put into vector form
 mu_log <- matrix(log_mu,nrow(Emissions),1)
 
+### NOTE: hear log_mu is of the log(total flux in a gridcell) and not of the log(flux density)
+### as we have in the paper. This is because we will not be multiplying B by the area
+### as we do for instance in the simulation study.
 
 #-------------------------------------------------------------------
 # 3. Deal with missing observations (and simulate new ones if desired)
