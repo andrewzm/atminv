@@ -3,7 +3,7 @@ atminv
 
 This page hosts a supplement package to the paper 'Spati-temporal bivariate
     statistical models for atmospheric trace-gas inversion by Zammit-Mangion
-    et al. (2015, submitted). The accompanying vignette in this package
+    et al. (2015, in press). The accompanying vignette in this package
     may be used to reproduce the results shown in Section 4.1 of the paper. We
     do not provide reproducible code for the example in Section 4.2 due to
     restrictions on data availability.
@@ -73,4 +73,4 @@ The `Matrix` package is v1.2-0. Results may change slightly across different `R`
 References
 -----
 
-Zammit-Mangion, A., Cressie, N., Ganesan, A.L., O'Doherty, S., Manning, A.J. (2015). Spatio-temporal bivariate statistical models for atmospheric trace-gas inversion. Submitted.
+Zammit-Mangion, A., Cressie, N., Ganesan, A.L., O'Doherty, S., Manning, A.J. (2015). Spatio-temporal bivariate statistical models for atmospheric trace-gas inversion. Chemometrics and Intelligent Laboratory Systems, in press.
