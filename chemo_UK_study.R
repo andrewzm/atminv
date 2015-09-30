@@ -20,7 +20,7 @@ library(fitdistrplus)
 rm(list=ls())
 cache_results <- 0
 load_results  <- 1
-save_images   <- 1
+save_images   <- 0
 
 md5_wrapper <- md5_cache("~/cache/Assim") # set up cache
 set.seed(1)

@@ -30,6 +30,7 @@ GMRF <- function(mu=NA,Q= sparseMatrix(i=c(1,2),j=c(1,2),x=4),intrinsic=0,n=NULL
                          mu <- matrix(0,nrow(Q),1)
                      }
                      stopifnot(nrow(mu) == nrow(Q))
+                     if(is.null(n)) n <- nrow(Q)
                      return(new("GMRF",mu=mu,Q=Q,intrinsic=intrinsic,n=n,t_axis=t_axis,rep=rep)) 
                  }
 
@@ -81,6 +82,50 @@ GMRF_RW <- function(n = 10,order=1,precinc = 1,df=data.frame()) {
     }
     return(new("GMRF",mu=mu,Q=Q,intrinsic=1,n=n,t_axis=0:(n-1),rep=df))
 }
+
+
+#' @title Autoregressive GMRF
+#' 
+#' @description This function initialises an autoregressive block and represents it as a Gaussian Markov Random Field with mean \code{mu} and precision matrix \code{Q}. Only AR1 processes along the real line  are implemented for now. Also a data frame can be specified with more details on the GMRF.
+#'
+#' @param n number of vertices
+#' @param a autoregression coefficient
+#' @param precinc precision constant (multiplies the template precision matrix)
+#' @param order order of AR process (only AR1 implemented for now)
+#' @param df data frame of length \code{n} with more details (for example axis, covariate information)
+#' @return Object of class GMRF with zero mean
+#' @keywords GMRF, random walk
+#' @export
+#' @examples
+#'
+#' require(Matrix)
+#' # Create a first-order random walk GMRF
+#' my_RW <- GMRF_AR1(n=10, a = 0.8, precinc =2)
+#' print(getPrecision(my_RW))
+#' print(getMean(my_RW))
+#' print(getDf(my_RW))
+GMRF_RW <- function(n = 10,a=0.8,order=1,precinc = 1,df=data.frame()) {
+    
+    stopifnot(order %in% c(1))
+    stopifnot(abs(a) < 1)
+    if(is.null(n)) n <- nrow(mu)
+    
+    mu <- matrix(0,nrow=n,ncol=1)
+    i = c(1:(n-1),1:(n-1))
+    j = c(1:(n-1),2:n)
+    x <- numeric(length=((n-1)*2))
+    x[1:(n-1)] = -a
+    x[n:((2*n)-2)] = 1
+    Dmat = sparseMatrix(i,j,x=x)
+    R = t(Dmat)%*%Dmat
+    if (order == 1) {
+        Q = precinc*R
+        intrinsic = 0
+        Q[1,1] <- 1
+    }
+    return(new("GMRF",mu=mu,Q=Q,intrinsic=1,n=n,t_axis=0:(n-1),rep=df))
+}
+
 
 #' @title Observation block
 #' 

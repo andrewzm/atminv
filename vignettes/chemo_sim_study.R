@@ -1,13 +1,13 @@
-## ----include=FALSE--------------------
+## ----include=FALSE-------------------------------------------------------
 library(knitr)
 opts_knit$set(width=40)
 
-## ----installPkgs,eval=FALSE-----------
+## ----installPkgs,eval=FALSE----------------------------------------------
 ## library(devtools)
 ## install_github("andrewzm/hmc")
 ## install_github("andrewzm/atminv")
 
-## ----loadPkgs,message=FALSE-----------
+## ----loadPkgs,message=FALSE----------------------------------------------
 library(ggplot2)
 library(grid)
 library(dplyr)
@@ -16,19 +16,17 @@ library(tidyr)
 library(gstat)
 library(hmc)
 library(atminv)
-# load_all("../../../pkgs//hmc")
-#library(devtools)
-#load_all("..")
-#library(scales) # for format_format
-#load_all("../../../../../CurrentProjects/PostDoc Bristol/R Code/pkg/MVST")
 
-## ----ST-grid--------------------------
+## ----ST-grid-------------------------------------------------------------
 ###------------------
 ### Parameters
 ###------------------
-model = "full" ## Either sparse or full or full_big or diag
-misspecification = 1
-#set.seed(25) # 25 , T = 400 or 15/200
+load_results  <- 1  # For quick vignette build
+cache_results <- 0  # Development only
+save_images <-   0  # Development only
+model = "full"  ## Either sparse or full or full_big or diag
+misspecification = 0
+#set.seed(25)        # deprecated, ignore
 ds <- 0.2            # 0.2 spacing. 
                      # NB: If we change this we need to 
                      # change the round() command further down
@@ -60,14 +58,10 @@ if(model %in% c("full","full_big")) {
 theta_t_true <- 0.8     # temporal correlation parameter ('a' in text)
 theta_s_true <- 1       # spatial range parameter ('d' in text)
 
-## ----bfun-----------------------------
+## ----bfun----------------------------------------------------------------
 ###------------------
 ### Transition kernel 
 ###------------------
-# p is a ST process and reflects the std of the truncated Gaussian.
-# This problem ONLY works if b is of relatively local scope. Once we 
-# have b which has a very large scope we get oscillations/instability
-
 b <- function(s,u,p) {
   absp <- max(abs(p),0.2)
   absp*sqrt(2*pi) * dnorm(u,mean = s, sd =absp) *
@@ -75,7 +69,7 @@ b <- function(s,u,p) {
     (abs(u - s) < absp)
 }
 
-## ----Wind-----------------------------
+## ----Wind----------------------------------------------------------------
 ## Sample the "wind" vector
 Q_s <- GMRF_RW(n = length(s_axis),
                order = 2,
@@ -96,21 +90,24 @@ data(sim.Random.seed)
 #load("~/Desktop/Chemometrics_results/sim.Random.seed.rda")
 
 # Now simulate this parameter by sampling from the GMRF
+# p is a ST process and reflects the std of the truncated Gaussian.
+# This problem ONLY works if b is of relatively local scope. Once we 
+# have b which has a very large scope we get oscillations/instability
 st_grid$p <- sample_GMRF(G,reps = 1)
 
-## ----upsilon-plot1,fig.keep=FALSE,eval=FALSE----
+## ----upsilon-plot1,fig.keep=FALSE,eval=FALSE-----------------------------
 ## print(LinePlotTheme() +
 ##         geom_tile(data=st_grid,aes(s,t,fill=p)) +
 ##         scale_fill_gradient2(low="blue",high="red",mid="white")
 ##       )
 
-## ----upsilon-plot2,fig.height=6,fig.width=5----
+## ----upsilon-plot2,fig.height=6,fig.width=5------------------------------
 print(LinePlotTheme() + 
         geom_tile(data=st_grid,aes(s,t,fill=p)) +
         scale_fill_gradient2(low="blue",high="red",mid="white")
       )
 
-## ----SRR1,include=FALSE,eval=FALSE----
+## ----SRR1,include=FALSE,eval=FALSE---------------------------------------
 ## ## Simulate the SRR at one location, s = 9.1
 ## s_sim <- 9.1
 ## Z <- matrix(0,nt,ns)
@@ -120,16 +117,16 @@ print(LinePlotTheme() +
 ##              p = as.numeric(subset(st_grid,s== s_sim & t==i)$p))
 ## }
 
-## ----sim-Yf---------------------------
+## ----sim-Yf--------------------------------------------------------------
 ###------------------
 ### Lognormal flux field
 ###------------------
 set.seed(1)
-variogram_model <- vgm(range = 3.334,            # Construct spherical semi-variogram
-                              nugget = 0.00533,
-                              psill = 0.80429,
-                              model= "Sph")
-S_f_log <- variogramLine(variogram_model,        # Find covariance matrix Sigma_f
+variogram_model <- vgm(range = 3.334,     # Construct spherical semi-variogram
+                       nugget = 0.00533,
+                       psill = 0.80429,
+                       model= "Sph")
+S_f_log <- variogramLine(variogram_model, # Find covariance matrix Sigma_f
                          dist_vector = sp::spDists(matrix(s_axis),
                                                  matrix(s_axis)),
                           covariance = TRUE)
@@ -140,11 +137,11 @@ st_grid <- st_grid %>%                           # Append Y_f to data frame
           left_join(data.frame(s=s_axis,
                                Yf = Yf_sim))
 
-if(misspecification)  {                           # If we are assuming misspecification
-    S_f_log <- diag(diag(S_f_log))                # We over-write Sigma_f to be diagonal
+if(misspecification)  {               # If we are assuming misspecification
+    S_f_log <- diag(diag(S_f_log))    # We over-write Sigma_f to be diagonal
 }
 
-## -------------------------------------
+## ------------------------------------------------------------------------
 ###------------------
 ### Mole fraction field
 ###------------------
@@ -156,7 +153,7 @@ st_grid <- st_grid %>%
             Ym = sum(b(s =s, u = s_axis,p = p) * 
                        Yf_sim * ds))
 
-## -------------------------------------
+## ------------------------------------------------------------------------
 ###------------------
 ### Observations
 ###------------------
@@ -172,7 +169,7 @@ if(model %in% c("full","diag")) {
                       m = 1:m_obs)
 }
 
-## -------------------------------------
+## ----Qobs----------------------------------------------------------------
 s_obs <- s_obs %>%
             left_join(st_grid) %>%
             mutate(z = Ym + rnorm(n = length(Ym), 
@@ -180,7 +177,7 @@ s_obs <- s_obs %>%
             arrange(t,s)
 Qobs <- sigma_eps_true^(-2) * .symDiagonal(nrow(s_obs))
 
-## -------------------------------------
+## ------------------------------------------------------------------------
 ## Now add the discrepancy
 if(model %in% c("full","diag")) {
 
@@ -198,10 +195,10 @@ if(model %in% c("full","diag")) {
     C_m <- .symDiagonal(nrow(s_obs))
 } else if(model == "full_big") {
 
-    corr_s_mat <- function(theta_s) corr_s(s = s_axis,theta_s = theta_s)
-    corr_t_mat <- function(theta_t) corr_t(t = t_axis,theta_t = theta_t)
-    d_corr_s_mat <- function(theta_s) d_corr_s(s = s_axis,theta_s = theta_s)
-    d_corr_t_mat <- function(theta_t) d_corr_t(t = t_axis,theta_t = theta_t)
+    corr_s_mat <- function(theta_s) atminv:::corr_s(s = s_axis,theta_s = theta_s)
+    corr_t_mat <- function(theta_t) atminv:::corr_t(t = t_axis,theta_t = theta_t)
+    d_corr_s_mat <- function(theta_s) atminv:::d_corr_s(s = s_axis,theta_s = theta_s)
+    d_corr_t_mat <- function(theta_t) atminv:::d_corr_t(t = t_axis,theta_t = theta_t)
 
     C_idx <- st_grid %>%
       as.data.frame() %>%
@@ -225,7 +222,7 @@ if(model %in% c("full","diag")) {
                z = z + dis)
 }
 
-## ----deprecated-sparse,include=FALSE----
+## ----deprecated-sparse,include=FALSE-------------------------------------
 # Not relavant to vignette
 if (model=="sparse") {
 
@@ -252,7 +249,7 @@ if (model=="sparse") {
 
 }
 
-## -------------------------------------
+## ------------------------------------------------------------------------
 if(model == "full") {
     X <- group_by(st_grid,s) %>%
         summarise(Yf = Yf[1],Ym_av = mean(Ym)) %>%
@@ -267,16 +264,16 @@ if(model == "full") {
         scale_linetype_discrete(guide=guide_legend(title="process"),
                                 labels=c("Yf (g/s/degree)","Ym (ppb)")) +
         xlab("s (degrees)")
-    ggsave(g,filename = "../../Sim_plot.png",width=10,height=4)
+    if(save_images) 
+      ggsave(g,filename = "../img/Sim_plot.png",width=10,height=4)
 }
 
-## ----YfYm-plot,fig.height=5,fig.width=10----
-print(g)
+## ----YfYm-plot,fig.height=5,fig.width=10---------------------------------
+if(model == "full") print(g)
 
-## ----deprecated-old-plot,include=FALSE,eval=FALSE----
+## ----deprecated-old-plot,include=FALSE,eval=FALSE------------------------
 ## ## Old plot, deprecated
 ## if(model == "full") {
-##     source("../../R/ggplot_dual_axis.R")
 ##     g1 <- LinePlotTheme() + geom_line(data=subset(X,!(s==new_obs) & process=="Yf"),aes(x=s,y=value)) + ylab("Yf (g/s/degree)") + theme(text = element_text(size=15),axis.title.y=element_text(vjust=0.6)) + xlab("s (degrees)")
 ##     g2 <- LinePlotTheme() + geom_line(data=subset(X,!(s==new_obs) & process=="Ym_av"),aes(x=s,y=value),linetype="dashed") + ylim(0,900) + theme(text = element_text(size=15),axis.title.y=element_text(vjust=0.6)) +
 ##         geom_segment(data=s_obs[1:5,],aes(x=s, xend=s, y = 0, yend = 50),
@@ -284,7 +281,7 @@ print(g)
 ##     G <- ggplot_dual_axis(g1,g2)
 ## }
 
-## ----deprecated-emulation,eval=FALSE,include=FALSE----
+## ----deprecated-emulation,eval=FALSE,include=FALSE-----------------------
 ## ###----------------------------------
 ## ### Emulation (deprecated!)
 ## ###----------------------------------
@@ -357,7 +354,7 @@ print(g)
 ##     scale_alpha_continuous(range = c(0,1))
 ## }
 
-## ----eval=TRUE,include=TRUE,message=FALSE----
+## ----eval=TRUE,include=TRUE,message=FALSE--------------------------------
 if(model %in% c("full","diag")) {
   df_for_B <- s_obs
 } else {
@@ -407,13 +404,14 @@ if(model == "full") {
     theme(panel.margin = unit(1.5, "lines")) + 
     xlab("u (degrees)") + 
     ylab("t (2 h steps)")
-  ggsave(filename = "../../B_plot.png",width=12)
+  if(save_images) 
+    ggsave(filename = "../img/B_plot.png",width=12)
 }
 
-## ----B-plot,fig.height=6,fig.width=10----
-print(B_plot)
+## ----B-plot,fig.height=6,fig.width=10------------------------------------
+if(model == "full") print(B_plot)
 
-## ----deprecated-other-figure,include=FALSE,eval=FALSE----
+## ----deprecated-other-figure,include=FALSE,eval=FALSE--------------------
 ## if(model == "full") {
 ##   BT1 <- data.frame(s = s_axis,t(B[141:145,])) %>% gather(obs,b,-s)
 ##   base_plot <- LinePlotTheme() + geom_line(data = subset(st_grid,t==1),aes(x=s,y=Yf)) +
@@ -421,7 +419,7 @@ print(B_plot)
 ##     geom_ribbon(data=subset(BT1,b>0), aes(x = s,ymax = b*100,ymin=0,group=obs,fill=obs),alpha=0.5,stat="identity")
 ## }
 
-## ----deprecated-Bayes-Linear,include=FALSE,eval=FALSE----
+## ----deprecated-Bayes-Linear,include=FALSE,eval=FALSE--------------------
 ## ###----------------------------------------------------
 ## ### Bayes Linear
 ## ###----------------------------------------------------
@@ -470,16 +468,17 @@ print(B_plot)
 ##   }
 ## }
 
-## ----mu-f-----------------------------
+## ----mu-f----------------------------------------------------------------
 mu_f <- matrix(exp(mu_f_log + 0.5*diag(S_f_log)))
 
-## ----EM-settings----------------------
+## ----EM-settings---------------------------------------------------------
 ###-----------------------------------------------------
 ### Laplace method -- use with caution because of mode close to zero
 ###-----------------------------------------------------
-n_EM <- 100
+
 
 if(model == "full") {
+  n_EM <- 100
   s_mol = s_obs$s[1:m_obs]         # prediction locs for mol fraction
   Y_init = c(mu_f,s_obs$z)         # initial expectation value for Y
   theta_init = c(1000,0.2,0.2)     # initial parameter vector
@@ -493,13 +492,14 @@ if(model == "full") {
   Qobs <- Qobs[-rm_idx,-rm_idx]   # new (observation) precision matrix
 
 } else if (model == "full_big") {
+    n_EM <- 10
     s_mol = s_axis                # prediction locs for mol fraction
     Y_init = c(mu_f,st_grid$Ym)   # initial expectation value for Y
     theta_init = c(1000,0.2,0.2)  # initial parameter vector
                                   # where theta = [sigma_zeta^2, theta_t, theat_s]
 }
 
-## ----EM-settings2,include=FALSE-------
+## ----EM-settings2,include=FALSE------------------------------------------
 if (model == "diag") {
   s_mol = s_obs$s[1:m_obs]
   Y_init = c(mu_f,s_obs$z)
@@ -510,7 +510,7 @@ if (model == "diag") {
   theta_init = c(0.1,0.2)
 }
 
-## ----EM-setup-------------------------
+## ----EM-setup------------------------------------------------------------
 EM_alg <- EM(s_obs = s_obs,                  # observation data frame
         C_m = C_m,                           # incidence matrix
         Qobs = Qobs,                         # observation precision matrix
@@ -526,21 +526,46 @@ EM_alg <- EM(s_obs = s_obs,                  # observation data frame
         n_EM = n_EM,                         # number of EM iterations
         model = model)                       # model we are using
 
-## ----EM,cache=TRUE,results="hide"-----
-for(i in 1:(n_EM-2)) {
-  X <- EM_alg(max_E_it = 1e6,
-              max_M_it = 50,
-              fine_tune_E = (i==0))
+## ----EM,results="hide"---------------------------------------------------
+filename <- paste0(model,"_misspec_",misspecification,".rda")
+if(load_results) {
+  load(system.file("extdata",filename, package = "atminv"))
+} else {
+  for(i in 1:(n_EM-2)) {
+    X <- EM_alg(max_E_it = 1e6,
+                max_M_it = 50,
+                fine_tune_E = (i==0))
+  }
+}
+if(cache_results & model == "full_big") {
+    X$lap_approx <- NULL # Save space
+    save(X,file=paste0("../inst/extdata/",filename))
 }
 
-## ----cov-compute----------------------
+## ----par-est-------------------------------------------------------------
+X$theta[,n_EM-1]
+
+## ----EM-plot,fig.height=4,fig.width=8,echo=2:4---------------------------
+par(mfrow=c(1,3))
+plot(X$theta[1,])
+plot(X$theta[2,])
+plot(X$theta[3,])
+par(mfrow=c(1,1))
+
+## ----startcomment, results="asis", echo=FALSE----------------------------
+if(model=="full_big"){
+  cat("\\begin{comment}")
+}
+
+## ----cov-compute---------------------------------------------------------
 if(model == "full") {
-  corr_zeta <- corr_zeta_fn(c(s_obs$s[1:(m_obs-1)],new_obs),t_axis,X$theta[2,n_EM],X$theta[3,n_EM])
+  corr_zeta <- corr_zeta_fn(c(s_obs$s[1:(m_obs-1)],new_obs),
+                            t_axis,X$theta[2,n_EM],X$theta[3,n_EM])
   S_zeta <- X$theta[1,n_EM] * corr_zeta
   Q_zeta <- chol2inv(chol(S_zeta))
 }
 
-## ----deprecated-cov-compute,include=FALSE,eval=FALSE----
+## ----deprecated-cov-compute,include=FALSE,eval=FALSE---------------------
 ## if (model == "diag") {
 ##   S_zeta <- X$theta[1,n_EM] * .symDiagonal(nrow(s_obs))
 ##   Q_zeta <- chol2inv(chol(S_zeta))
@@ -548,7 +573,7 @@ if(model == "full") {
 ##   stop("Didn't sample for sparse yet")
 ## }
 
-## -------------------------------------
+## ----laplace-fns---------------------------------------------------------
 lap2 <- Yf_marg_approx_fns(s = s_obs,            # obs. locations
                            C_m = C_m,            # incidence matrix
                            Qobs = Qobs,          # obs. precision matrix
@@ -558,7 +583,7 @@ lap2 <- Yf_marg_approx_fns(s = s_obs,            # obs. locations
                            S_f_log = S_f_log,    # covariance of log(Y_f)
                            ind=X$ind)            # only consider indices with SRR>0
 
-## ----HMC-setup------------------------
+## ----HMC-setup-----------------------------------------------------------
 M <- diag(1/(X$lap_approx$Yf^2)) # scaling matrix: puts variables on same scale
 
 if(model == "full"){             # Function for generating Delta
@@ -578,7 +603,10 @@ q <- matrix(0,nrow(M),N)   # matrix for storing samples
 qsamp <- X$lap_approx$Yf   # first sample
 dither <- i <- count <- 1  # no dithering, initialise counts
 
-## ----HMC-init-------------------------
+ if(!(N==10000) & cache_results) 
+   stop("Cannot cache unless N =10000")
+
+## ----HMC-init------------------------------------------------------------
 sampler <- hmc_sampler(U = lap2$logf,                 # log-likelihood
                        dUdq = lap2$gr_logf,           # gr. of log-likelihood 
                        M = M,                         # scaling matrix
@@ -586,83 +614,89 @@ sampler <- hmc_sampler(U = lap2$logf,                 # log-likelihood
                        L = L,                         # number of steps
                        lower = rep(0,length(X$ind)))  # lower limits
 
-## ----HMC-run,results="hide",cache=TRUE----
-while(i < N) {
-  qsamp <- sampler(q = qsamp)
-  
-  if(count  == dither) {
-    q[,i] <- qsamp
-    count = 1
-    i <- i + 1
-    print(paste0("Sample: ",i," Acceptance rate: ",(nrow(unique(t(q)))-1)/i))
-  } else {
-    count <- count + 1
+## ----HMC-run,results="hide"----------------------------------------------
+if(!load_results) {
+  while(i < N) {
+    qsamp <- sampler(q = qsamp)
+    
+    if(count  == dither) {
+      q[,i] <- qsamp
+      count = 1
+      i <- i + 1
+      print(paste0("Sample: ",i," Acceptance rate: ",(nrow(unique(t(q)))-1)/i))
+    } else {
+      count <- count + 1
+    }
   }
+} else {
+  load(system.file("extdata",filename, package = "atminv"))
 }
+if(cache_results)
+    save(X,q,i,count,file=paste0("../inst/extdata/",filename))
 
-## ----HMC-acceptance-------------------
+## ----HMC-acceptance------------------------------------------------------
 print(paste0("Sample: ",i," Acceptance rate: ",(nrow(unique(t(q)))-1)/i))
 
-## ----flux-plot,include=FALSE,eval=FALSE----
-##  Q <- as.data.frame(t(q[1:length(X$ind),-c(1:1000,i)])) %>%
-##   tidyr::gather(t,z) %>%
-##   separate(t, into=c("V","s"),sep="V") %>%
-##   select(-V) %>%
-##   mutate(s = s_axis[as.numeric(s)])
-## 
-## Q2 <- Q %>%
-##       mutate(s = as.factor(s))
-## g <- LinePlotTheme() +
-##   geom_boxplot(data=Q2,aes(x=s,y=z))  +
-##   scale_x_discrete(breaks = s_axis[seq(1,length(s_axis),length=7)]) +
-##   geom_point(data=subset(st_grid, s < 5),
-##              aes(x=as.factor(s),y = Yf),
-##              colour='black',size=3,shape=4) +
-##   geom_segment(data=s_obs,aes(x=as.factor(s_obs$s),
-##                               xend=as.factor(s_obs$s),
-##                               y = 0, yend = 50),
-##                  arrow=arrow(length=unit(0.1,"cm"))) +
-##   geom_line(data=data.frame(s=rep(3.9,2),
-##                             z=c(-200,1300)),
-##             aes(as.factor(s),z),linetype="dashed") +
-##   geom_line(data=data.frame(s=rep(-5.3,2),
-##                             z=c(-200,1300)),
-##             aes(as.factor(s),z),linetype="dashed") +
-##   coord_fixed(ratio = 0.03, ylim=c(0,1050)) +
-##   ylab("Yf (g/s/degree)") + xlab("s (degrees)")
-## if(!misspecification)
-##   ggsave("../../Sim1_samples.png",plot = g,width=10)
+## ----flux-plot-----------------------------------------------------------
+ Q <- as.data.frame(t(q[1:length(X$ind),-c(1:1000,i)])) %>%
+  tidyr::gather(t,z) %>%
+  separate(t, into=c("V","s"),sep="V") %>%
+  select(-V) %>%
+  mutate(s = s_axis[as.numeric(s)])
 
-## ----HMC-plot,fig.height=6,fig.width=5----
+Q2 <- Q %>%
+      mutate(s = as.factor(s))
+g <- LinePlotTheme() + 
+  geom_boxplot(data=Q2,aes(x=s,y=z))  +
+  scale_x_discrete(breaks = s_axis[seq(1,length(s_axis),length=7)]) +
+  geom_point(data=subset(st_grid, s < 5),
+             aes(x=as.factor(s),y = Yf),
+             colour='black',size=3,shape=4) +
+  geom_segment(data=s_obs,aes(x=as.factor(s_obs$s), 
+                              xend=as.factor(s_obs$s), 
+                              y = 0, yend = 50),
+                 arrow=arrow(length=unit(0.1,"cm"))) +
+  geom_line(data=data.frame(s=rep(3.9,2),
+                            z=c(-200,1300)),
+            aes(as.factor(s),z),linetype="dashed") +
+  geom_line(data=data.frame(s=rep(-5.3,2),
+                            z=c(-200,1300)),
+            aes(as.factor(s),z),linetype="dashed") +
+  coord_fixed(ratio = 0.03, ylim=c(0,1050)) + 
+  ylab("Yf (g/s/degree)") + xlab("s (degrees)")
+if(!misspecification & model=="full" & save_images) 
+  ggsave("../img/Sim1_samples.png",plot = g,width=10)
+
+## ----HMC-plot,fig.height=4,fig.width=8-----------------------------------
 print(g)
 
-## ----include=FALSE,eval=FALSE---------
-## comp_density <- function(j,xu,xl=0,yu=0.01) {
-##   x <- seq(xl,xu,by=1)
-##   hist(q[j,1:(N-1)],xlab=c("flux (g/s/degree)"),
-##        ylab="[Yf | Zm]",
-##        main="",
-##        freq=F,
-##        xlim=c(xl,xu),
-##        ylim=c(0,yu))
-##   lines(x,dnorm(x,mean=X$lap_approx$Yf[j],
-##                 sd=sqrt(X$lap_approx$S_ff[j,j])),
-##         lty=2)
-## }
-## 
-## if(!misspecification) {
-##   png("../../density_sim1.png", width=4, height=4, units="in", res=300)
-##   comp_density(70,800,-200,yu=0.005); dev.off()
-##   png("../../density_sim10.png", width=4, height=4, units="in", res=300)
-##   comp_density(24,400,50,yu=0.014); dev.off()
-## }
+## ----density-compare-----------------------------------------------------
+comp_density <- function(j,xu,xl=0,yu=0.01) {
+  x <- seq(xl,xu,by=1)
+  hist(q[j,1:(N-1)],xlab=c("flux (g/s/degree)"),
+       ylab="[Yf | Zm]",
+       main="",
+       freq=F,
+       xlim=c(xl,xu),
+       ylim=c(0,yu))
+  lines(x,dnorm(x,mean=X$lap_approx$Yf[j],
+                sd=sqrt(X$lap_approx$S_ff[j,j])),
+        lty=2)
+}
 
-## ----fig.height=4,fig.width=7---------
+if(!misspecification & model=="full" & save_images) {
+  png("../img/density_sim1.png", width=4, height=4, units="in", res=300)
+  comp_density(70,800,-200,yu=0.005); dev.off()
+  png("../img/density_sim10.png", width=4, height=4, units="in", res=300)
+  comp_density(24,400,50,yu=0.014); dev.off()
+}
+
+## ----fig.height=4,fig.width=7--------------------------------------------
 par(mfrow=c(1,2))
 comp_density(70,800,-200,yu=0.005);
 comp_density(24,400,50,yu=0.014);
 
-## ----mf-samps-------------------------
+## ----mf-samps------------------------------------------------------------
 ## Now get the mole fraction samples
 mf_samp <- matrix(0,nrow(B),N)                # initialise mole-fraction samples array
 mu_post <- matrix(0,nrow(B),N)                # initialise mole-fraction samples array
@@ -678,7 +712,7 @@ for (i in 1:N){
                             L_S_post %*% rnorm(nrow(B)))
 }
 
-## ----mf-validation--------------------
+## ----mf-validation-------------------------------------------------------
 stat1 <-  seq(6,600,by=6)
 mu <- apply(mf_samp[stat1,-c(1:1000,i)],1,median)
 uq <- apply(mf_samp[stat1,-c(1:1000,i)],1,quantile,0.75)
@@ -694,13 +728,13 @@ g <- LinePlotTheme() +
              aes(x=t,y = z),colour='black',size=3,shape=4)+
     ylab("Ym (ppb)") + xlab("t (2 h steps)")
 
-if(!misspecification) 
-  ggsave("../../MF_samples.png",plot = g,width=10,height=3)
+if(!misspecification & model=="full" & save_images)
+  ggsave("../img/MF_samples.png",plot = g,width=10,height=3)
 
-## ----fig.height=4,fig.width=7---------
+## ----fig.height=4,fig.width=7--------------------------------------------
 print(g)
 
-## ----stats----------------------------
+## ----stats---------------------------------------------------------------
 # Flux errors
 residual <-(st_grid$Yf[1:75] - apply(q,1,mean))
 post_unc <- apply(q,1,var)
@@ -711,4 +745,9 @@ print(paste0("S2f = ", sqrt(mean(residual^2) /mean(post_unc))))
 residual <- (apply(mf_samp[rm_idx,],1,mean) - subset(st_grid,s == new_obs)$Ym)
 post_unc <- apply(mf_samp[rm_idx,],1,var)
 print(paste0("S1m = ", sqrt(mean(residual^2))))
+
+## ----endcomment, results="asis", echo=FALSE------------------------------
+if(model=="full_big"){
+  cat("\\end{comment}")
+}
 
