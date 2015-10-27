@@ -1,12 +1,10 @@
 atminv
 =====
 
-This page hosts a supplement package to the paper 'Spati-temporal bivariate
+This page hosts a supplement package to the paper 'Spatio-temporal bivariate
     statistical models for atmospheric trace-gas inversion by Zammit-Mangion
-    et al. (2015, in press). The accompanying vignette in this package
-    may be used to reproduce the results shown in Section 4.1 of the paper. We
-    do not provide reproducible code for the example in Section 4.2 due to
-    restrictions on data availability.
+    et al. (2016, in press). The accompanying vignette in this package
+    may be used to reproduce the results shown in Section 4.1 of the paper.
 
 To download the vignette without reproducing it on your machine, please view it in the `vignettes` folder or by directly click on the following links:
 
@@ -42,11 +40,6 @@ If you do not wish to compile the vignette (which takes a while) please set `bui
 and select the vignette under `atminv`.
 
 
-UK case study
--------
-
-The file `chemo_UK_study.R` contains the code for Example 4.2. Unfortunately the files are too large to upload on Github so they have been uploaded [here](http://hpc.niasra.uow.edu.au/ckan/dataset/example-dataset-for-atmospheric-trace-gas-inversion) instead. We only provide an `R` file for this example, which, however is self-contained. This `R` file should run without any problems when all the datasets have been extracted and put in a `../data/` folder. Obviously this path can be changed within the code to suit one's needs.
-
 
 Details
 -------
@@ -58,6 +51,13 @@ Section 4.1 details three sub-experiments. The first is the vanilla case with no
 - To run the third case make sure `model = "full_big"` and `misspecification = 0`.
 
 Note that if `load_results <- 1` then the computationally intensive results are simply loaded from cache. To run from scratch please set `load_results <- 0`.
+
+UK and Ireland case study
+-------
+
+The file `chemo_UK_study.R` contains the code for Example 4.2. Unfortunately the files are too large to upload on Github so they have been uploaded [here](http://hpc.niasra.uow.edu.au/ckan/dataset/example-dataset-for-atmospheric-trace-gas-inversion) instead. We only provide an `R` file for this example, which, however is self-contained. The `R` file is named `chemo_UK_study.R` and is found in the root folder on this page. It should run without any problems when all the datasets have been extracted and put in a `../data/` folder. Obviously this path can be changed within the code to suit one's needs.
+
+
 
 Versions
 --------
@@ -73,4 +73,4 @@ The `Matrix` package is v1.2-0. Results may change slightly across different `R`
 References
 -----
 
-Zammit-Mangion, A., Cressie, N., Ganesan, A.L., O'Doherty, S., Manning, A.J. (2015). Spatio-temporal bivariate statistical models for atmospheric trace-gas inversion. Chemometrics and Intelligent Laboratory Systems, in press.
+Zammit-Mangion, A., Cressie, N., Ganesan, A.L., O'Doherty, S., Manning, A.J. (2015). Spatio-temporal bivariate statistical models for atmospheric trace-gas inversion. Chemometrics and Intelligent Laboratory Systems, doi: 10.1016/j.chemolab.2015.09.006, in press.
