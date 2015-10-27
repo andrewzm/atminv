@@ -44,12 +44,12 @@ setClass("GMRF_RW",contains="GMRF")
 
 
 #'  @docType class
-#'  @title GMRF_RW
+#'  @title GMRF_AR
 #'
 #' @description An autoregressive proces which inherits from class \code{GMRF}. The primary difference is that this class is constructed using
 #' a first-order auto-regressive structure. Unlike the random walk, this is not an intrinsic GMRF.
-#' @rdname GMRF_RWclass
-setClass("GMRF_AR1",contains="GMRF")
+#' @rdname GMRF_ARclass
+setClass("GMRF_AR",contains="GMRF")
 
 #'  @docType class
 #'  @title observation block

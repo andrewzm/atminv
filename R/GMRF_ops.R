@@ -104,7 +104,7 @@ GMRF_RW <- function(n = 10,order=1,precinc = 1,df=data.frame()) {
 #' print(getPrecision(my_RW))
 #' print(getMean(my_RW))
 #' print(getDf(my_RW))
-GMRF_RW <- function(n = 10,a=0.8,order=1,precinc = 1,df=data.frame()) {
+GMRF_AR <- function(n = 10,a=0.8,order=1,precinc = 1,df=data.frame()) {
     
     stopifnot(order %in% c(1))
     stopifnot(abs(a) < 1)

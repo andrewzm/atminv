@@ -45,7 +45,7 @@ and select the vignette under `atminv`.
 UK case study
 -------
 
-The file `chemo_UK_study.R` contains the code for Example 4.2. Unfortunately since we cannot disseminate the data freely you will not be able to run this code. The `R` file however is self-contained and will run when the `../data/` folder is present with the required data.
+The file `chemo_UK_study.R` contains the code for Example 4.2. Unfortunately the files are too large to upload on Github so they have been uploaded [here](http://hpc.niasra.uow.edu.au/ckan/dataset/example-dataset-for-atmospheric-trace-gas-inversion) instead. We only provide an `R` file for this example, which, however is self-contained. This `R` file should run without any problems when all the datasets have been extracted and put in a `../data/` folder. Obviously this path can be changed within the code to suit one's needs.
 
 
 Details
