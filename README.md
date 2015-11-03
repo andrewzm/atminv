@@ -43,13 +43,13 @@ Important: The package `maps` has been updated to version 3. Some maps have chan
 
 My `sessionInfo()` one month after releasing these results (after having updated the `maps` package) was as follows:
 
-   R version 3.2.0 (2015-04-16)
-   Platform: x86_64-pc-linux-gnu (64-bit)
-   Running under: Ubuntu 14.04.2 LTS
+      R version 3.2.0 (2015-04-16)
+      Platform: x86_64-pc-linux-gnu (64-bit)
+      Running under: Ubuntu 14.04.2 LTS
 
-   locale:
-    [1] LC_CTYPE=en_AU.UTF-8       LC_NUMERIC=C               LC_TIME=en_AU.UTF-8        LC_COLLATE=en_AU.UTF-8    
-     [5] LC_MONETARY=en_AU.UTF-8    LC_MESSAGES=en_AU.UTF-8    LC_PAPER=en_AU.UTF-8       LC_NAME=C                 
+      locale:
+      [1] LC_CTYPE=en_AU.UTF-8       LC_NUMERIC=C               LC_TIME=en_AU.UTF-8        LC_COLLATE=en_AU.UTF-8    
+      [5] LC_MONETARY=en_AU.UTF-8    LC_MESSAGES=en_AU.UTF-8    LC_PAPER=en_AU.UTF-8       LC_NAME=C                 
       [9] LC_ADDRESS=C               LC_TELEPHONE=C             LC_MEASUREMENT=en_AU.UTF-8 LC_IDENTIFICATION=C       
 
       attached base packages:
