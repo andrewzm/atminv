@@ -39,6 +39,33 @@ If you do not wish to compile the vignette (which takes a while) please set `bui
     
 and select the vignette under `atminv`.
 
+Important: The package `maps` has been updated to version 3. Some maps have changed and the results will change. To obtain exact results please downgrade to 2.9.
+
+My `sessionInfo()` one month after releasing these results (after having updated the `maps` package) was as follows:
+
+   R version 3.2.0 (2015-04-16)
+   Platform: x86_64-pc-linux-gnu (64-bit)
+   Running under: Ubuntu 14.04.2 LTS
+
+   locale:
+    [1] LC_CTYPE=en_AU.UTF-8       LC_NUMERIC=C               LC_TIME=en_AU.UTF-8        LC_COLLATE=en_AU.UTF-8    
+     [5] LC_MONETARY=en_AU.UTF-8    LC_MESSAGES=en_AU.UTF-8    LC_PAPER=en_AU.UTF-8       LC_NAME=C                 
+      [9] LC_ADDRESS=C               LC_TELEPHONE=C             LC_MEASUREMENT=en_AU.UTF-8 LC_IDENTIFICATION=C       
+
+      attached base packages:
+      [1] grid      stats     graphics  grDevices utils     datasets  methods   base     
+
+      other attached packages:
+       [1] fitdistrplus_1.0-4 hmc_0.1.0          atminv_0.1.0       gstat_1.0-26       sp_1.2-1           gridExtra_2.0.0   
+        [7] ggplot2_1.0.1      devtools_1.8.0     Matrix_1.2-0       tidyr_0.3.1        dplyr_0.4.3       
+
+	loaded via a namespace (and not attached):
+	 [1] Rcpp_0.12.1       git2r_0.11.0      plyr_1.8.3        R.methodsS3_1.7.0 R.utils_2.1.0     tools_3.2.0      
+	  [7] xts_0.9-7         SDMTools_1.1-221  digest_0.6.8      memoise_0.2.1     gtable_0.1.2      lattice_0.20-31  
+	  [13] DBI_0.3.1         curl_0.9.3        parallel_3.2.0    proto_0.3-10      stringr_1.0.0     xml2_0.1.2       
+	  [19] rversions_1.0.2   spacetime_1.1-4   R6_2.1.1          survival_2.38-2   reshape2_1.4.1    magrittr_1.5     
+	  [25] splines_3.2.0     scales_0.3.0      intervals_0.15.1  MASS_7.3-40       assertthat_0.1    colorspace_1.2-6 
+	  [31] stringi_1.0-1     munsell_0.4.2     FNN_1.1           R.oo_1.19.0       zoo_1.7-12       
 
 
 Details
