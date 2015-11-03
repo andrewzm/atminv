@@ -39,7 +39,7 @@ If you do not wish to compile the vignette (which takes a while) please set `bui
     
 and select the vignette under `atminv`.
 
-**Important:** The package `maps` has been updated to version 3. Some maps have changed and the results will change. To obtain exact results please downgrade to 2.9. Also, if you are getting different results it probably is because you have a different package version of one of the below.  My `sessionInfo()` one month after releasing these results (after having rolled back the `maps` package) was as follows:
+**Important:** The package `maps` has been updated to version 3. Some maps have changed and the results will change. To obtain exact results please downgrade to 2.3.11. Also, if you are getting different results it probably is because you have a different package version of one of the below.  My `sessionInfo()` one month after releasing these results (after having rolled back the `maps` package) was as follows:
 
       R version 3.2.0 (2015-04-16)
       Platform: x86_64-pc-linux-gnu (6.4e+01-bit)
