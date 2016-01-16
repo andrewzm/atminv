@@ -84,9 +84,9 @@ Stations <-list(MHD = list(model_filenames = c("../data/MHD_model_012014.txt",
 m_obs <- length(Stations)
 
 ### Load maps
-
 # Load world map and subset to interesting countries
-Europe <- map_data("world") %>%  
+data("world",package = "atminv")
+Europe <- world %>%  
     subset(region %in% c("UK","France","Ireland")) %>%
     mutate(id = group, x=long,y=lat)
 
