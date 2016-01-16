@@ -1,10 +1,7 @@
 atminv
 =====
 
-This page hosts a supplement package to the paper 'Spatio-temporal bivariate
-    statistical models for atmospheric trace-gas inversion by Zammit-Mangion
-    et al. (2016, in press). The accompanying vignette in this package
-    may be used to reproduce the results shown in Section 4.1 of the paper.
+This page hosts a supplement package to reproduce the results in the papers 'Spatio-temporal bivariate statistical models for atmospheric trace-gas inversion' by Zammit-Mangion et al. (2015) and  'Trans-Gaussian bivariate modelling with application to atmospheric trace-gas inversion'. I will call these two papers **Paper 1** and **Paper 2**, respectively. The accompanying vignette in this package may be used to reproduce the results shown in Section 4.1 of Paper 1 while the two R scripts in the top-level folder may be used to reproduce the results in the UK/Ireland sections of both papers.
 
 To download the vignette without reproducing it on your machine, please view it in the `vignettes` folder or by directly click on the following links:
 
@@ -18,15 +15,14 @@ The presentation I gave for the 27th Goulburn Research Fellows Meeting (2015) th
 
 The presentation I gave in the Spatial Statistics Conference in Avignon (2015) that is centred around this work is [here](https://github.com/andrewzm/bicon/blob/master/pres/2015_06_Zammit.pdf?raw=true).
 
-
-
 Reproducibility 
 -------
     
-If you wish to reproduce the results, you will need to install the package and its dependencies. One of its dependencies, `hmc`, needs to be installed manually. To do this please open an R consoles, make sure you have `devtools` installed, and then type
+If you wish to reproduce the results, you will need to install the package and its dependencies. Two of its dependencies, `hmc` and `linalg`, need to be installed manually. To do this please open an R consoles, make sure you have `devtools` installed, and then type
 
     library(devtools)
     install_github("andrewzm/hmc",,dependencies=T)
+    install_github("andrewzm/linalg",,dependencies=T)
 
 To install the `atminv` package and the other dependencies, please make sure you have `devtools` loaded and then type
 
@@ -39,7 +35,7 @@ If you do not wish to compile the vignette (which takes a while) please set `bui
     
 and select the vignette under `atminv`.
 
-**Important:** The package `maps` has been updated to version 3. Some maps have changed and the results will change. To obtain exact results please downgrade to 2.3.11. Also, if you are getting different results it probably is because you have a different package version of one of the below.  My `sessionInfo()` one month after releasing these results (after having rolled back the `maps` package) was as follows:
+**Important:** The package `maps` has been updated to version 3. The results change slightly with the new maps. For reproducibility's sake, I now have saved the world map I use in the `data/` folder, which is equivalent to that in the `maps` package version 2.3.11. The `sessionInfo()` one month after releasing these results  for the first paper (after having rolled back the `maps` package) was as follows:
 
       R version 3.2.0 (2015-04-16)
       Platform: x86_64-pc-linux-gnu (6.4e+01-bit)
@@ -68,10 +64,10 @@ and select the vignette under `atminv`.
       [37] FNN_1.1            R.oo_1.19.0        zoo_1.7-12        
 
 
-Details
+Simulation experiment in Paper 1
 -------
 
-Section 4.1 details three sub-experiments. The first is the vanilla case with no model misspecification. The second assumes model misspecification, specifically that the flux field is uncorrelated even though it is not. The third assumes no misspecification but uses 1000 observations and shows that the EM-Laplace algorithm can run even in this scenario. If you wish to run these three different scenarios please download the `.Rnw` file from the `vignettes`, load `RStudio` and set `Tools -> Global Options -> Sweave -> Weave Rnw files using knitr`, and then press `Compile PDF`. Before doing so:
+Section 4.1 in Paper 1 details three sub-experiments. The first is the vanilla case with no model misspecification. The second assumes model misspecification, specifically that the flux field is uncorrelated even though it is not. The third assumes no misspecification but uses 1000 observations and shows that the EM-Laplace algorithm can run even in this scenario. If you wish to run these three different scenarios please download the `.Rnw` file from the `vignettes`, load `RStudio` and set `Tools -> Global Options -> Sweave -> Weave Rnw files using knitr`, and then press `Compile PDF`. Before doing so:
 
 - To run the first case make sure `model = "full"` and `misspecification = 0`.
 - To run the second case make sure `model = "full"` and `misspecification = 1`.
@@ -79,7 +75,7 @@ Section 4.1 details three sub-experiments. The first is the vanilla case with no
 
 Note that if `load_results <- 1` then the computationally intensive results are simply loaded from cache. To run from scratch please set `load_results <- 0`.
 
-UK and Ireland case study
+UK and Ireland case study in Paper 1
 -------
 
 The file `chemo_UK_study.R` contains the code for Example 4.2. Unfortunately the files are too large to upload on Github so they have been uploaded [here](http://hpc.niasra.uow.edu.au/ckan/dataset/example-dataset-for-atmospheric-trace-gas-inversion) instead. We only provide an `R` file for this example, which, however is self-contained. The `R` file is named `chemo_UK_study.R` and is found in the root folder on this page. It should run without any problems when all the datasets have been extracted and put in a `../data/` folder. Obviously this path can be changed within the code to suit one's needs.
@@ -89,7 +85,7 @@ The file `chemo_UK_study.R` contains the code for Example 4.2. Unfortunately the
 Versions
 --------
 
-The results in the paper were carried out with 
+The results in both papers were carried out with 
 
     R version 3.2.0 (2015-04-16)
     Platform: x86_64-pc-linux-gnu (64-bit)
@@ -100,4 +96,7 @@ The `Matrix` package is v1.2-0. Results may change slightly across different `R`
 References
 -----
 
-Zammit-Mangion, A., Cressie, N., Ganesan, A.L., O'Doherty, S., Manning, A.J. (2015). Spatio-temporal bivariate statistical models for atmospheric trace-gas inversion. Chemometrics and Intelligent Laboratory Systems, doi: 10.1016/j.chemolab.2015.09.006, in press.
+Zammit-Mangion, A., Cressie, N., Ganesan, A.L., O'Doherty, S., Manning, A.J. (2015). Spatio-temporal bivariate statistical models for atmospheric trace-gas inversion. Chemometrics and Intelligent Laboratory Systems, 149, 227--241, doi: 10.1016/j.chemolab.2015.09.006.
+
+Zammit-Mangion, A., Cressie, N., Ganesan, A.L. Trans-Gaussian bivariate modelling with application to atmospheric trace-gas inversion, submitted to Spatial Statistics.
+
