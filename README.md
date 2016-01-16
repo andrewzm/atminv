@@ -85,6 +85,11 @@ UK and Ireland observation system simulation experiment in Paper 2
 
 The file `spasta_UK_study.R` contains the code for Section 5. Unfortunately the files are too large to upload on Github so they have been uploaded [here](http://hpc.niasra.uow.edu.au/ckan/dataset/example-dataset-for-atmospheric-trace-gas-inversion) instead. We only provide an `R` file for this example, which, however is self-contained. The `R` file is named `chemo_UK_study.R` and is found in the root folder on this page. It should run without any problems when all the datasets have been extracted and put in a `../data/` folder. Obviously this path can be changed within the code to suit one's needs.
 
+Plots of cumulant functions in Paper 2
+-------
+
+The code to reproduce the plots of the cumulant functions in Section 2 of Paper 2 is in `spasta_cumulants_plots.R`.
+
 Versions
 --------
 
