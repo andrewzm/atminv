@@ -35,7 +35,9 @@ If you do not wish to compile the vignette (which takes a while) please set `bui
     
 and select the vignette under `atminv`.
 
-**Important:** The package `maps` has been updated to version 3. The results change slightly with the new maps. For reproducibility's sake, I now have saved the world map I use in the `data/` folder, which is equivalent to that in the `maps` package version 2.3.11. The `sessionInfo()` one month after releasing these results  for the first paper (after having rolled back the `maps` package) was as follows:
+**Important:** The package `maps` has been updated to version 3. The results change slightly with the new maps. For reproducibility's sake, I now have saved the world map I use in the `data/` folder, which is equivalent to that in the `maps` package version 2.3.11. Also since `ggplot2 v2.0.0`, the plotting no longer works with grouped data frames. To obtain the required plots, converte the goruped data frame to a data frame using `data.frame()`.
+
+The `sessionInfo()` one month after releasing these results  for the first paper (after having rolled back the `maps` package) was as follows:
 
       R version 3.2.0 (2015-04-16)
       Platform: x86_64-pc-linux-gnu (6.4e+01-bit)
