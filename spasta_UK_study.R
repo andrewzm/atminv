@@ -638,7 +638,8 @@ if(do_inference) {
             if(i%%10 == 0)
                 cat(paste0("Sample: ",i," Acceptance rate: ",
                            (length(unique(Yf_samp[1,]))-1)/i,"\n"),
-                file=paste0(model,"_Chain_",j,"TI",true_inventory,"RD",real_data),
+                file=paste0("./inst/extdata/spastaMCMC/",model,
+                            "_Chain_",j,"TI",true_inventory,"RD",real_data),
                 append=TRUE)
 
             if(!all(curr_Yf_samp == Yf_samp[,i-1])) Yf_accept[i] <- 1
