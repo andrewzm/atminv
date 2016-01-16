@@ -1,44 +1,46 @@
-#---------------------
-# 1. Model Setup
-#---------------------
-
-## Important: set wkdir to base path of package atminv
+## Important: set wkdir to base path of package atminv if saving images or doing inference
 
 library(dplyr)
 library(tidyr)
 library(Matrix)
-library(devtools)
-library(ggplot2)
-library(grid)
-library(gridExtra)
-library(sp)      # Needed for variogram modelling
-library(gstat)   # Needed for variogram modelling
-#library(atminv)  # https://github.com/andrewzm/atminv
-library(hmc)     # https://github.com/andrewzm/hmc
-library(fitdistrplus)
-library(devtools)
-library(linalg)
-load_all("../atminv/")
+library(ggplot2)        # for plotting
+library(grid)           # for plotting
+library(gridExtra)      # for plotting
+library(atminv)         # https://github.com/andrewzm/atminv
+library(hmc)            # https://github.com/andrewzm/hmc
+library(linalg)         # https://github.com/andrewzm/linalg
+library(foreach)        # for parallel computations
+library(doRNG)          # for parallel computations
+library(doMC)           # for parallel computations
+
+#-------------------------------------------------------------------
+# 1. Program setup
+#------------------------------------------------------------------
+
 
 rm(list=ls())
-save_images   <- 1
-show_images   <- 0
-N             <- 12000
-adapt         <- 1000
-burnin        <- 8000
-dither        <- 10
-n_parallel    <- 10  ## 10
-do_inference  <- 0
-true_inventory<- 1
-real_data     <- 0
-model <- "Gaussian.uncorrelated" #Box-Cox, Lognormal, Gaussian,   Box-Cox.uncorrelated, Lognormal.uncorrelated or Gaussian.uncorrelated
-print(paste0("Doing Model ",model," with ", N," samples and ",n_parallel,
+
+save_images   <- 1      # save images?
+N             <- 12000  # number of MCMC samples per chain
+adapt         <- 1000   # number of adaptation samples
+burnin        <- 8000   # number of burnin samples (incl. adaptation)
+dither        <- 10     # thinning factor
+n_parallel    <- 10     # number of parallel chains
+do_inference  <- 0      # do inference or load results?
+true_inventory<- 1      # assume true inventory or wrong inventory?
+real_data     <- 0      # use real data or simulated data?
+model <- "Gaussian.uncorrelated" # Can be one of the following:
+# Box-Cox, Lognormal, Gaussian,   Box-Cox.uncorrelated, 
+# Lognormal.uncorrelated or Gaussian.uncorrelated
+
+if(do_inference)
+  print(paste0("Doing inference with Model ",model," with ", N," samples and ",n_parallel,
              " parallel chains, true_inventory = ",true_inventory, " and real data = ",real_data))
 
-select <- dplyr::select
+select <- dplyr::select  # ensure select is the dplyr select
 
 md5_wrapper <- md5_cache("~/cache/Assim") # set up cache
-set.seed(1)
+set.seed(1) # fix seed
 
 miss_val = -999  # missing value in datasets
 ymin = 36.469    # minimum lon coord
@@ -101,6 +103,7 @@ Emissions <- group_by(yx,breaks_x,breaks_y) %>%
 Emissions_land <- subset(Emissions,
                          region %in% c("UK","Ireland"))
 
+## Function to visualise a field of the data frame Emissions_map
 Emissions_map <- function(field,ll=-2000,ul=2000) {
     Emissions_land$ul <- ul
     Emissions_land$ll <- ll
@@ -115,49 +118,37 @@ Emissions_map <- function(field,ll=-2000,ul=2000) {
         xlab("lon (degrees)") + ylab("lat (degrees)") +
         theme(axis.title.y = element_text(vjust = 1))
 }
-if(show_images) print(Emissions_map("z"))
+print(Emissions_map("z"))
 
 
-## Now find posterior distribution of lambda,tau,kappa and theta from these "data"
-#Dist_mat <- fields::rdist(Emissions_land[,c("x","y")])
-yx_land <- subset(yx,region %in% c("UK","Ireland"))
-Dist_mat <- fields::rdist(Emissions_land[,c("x","y")])
-X <- matrix(1,nrow(Dist_mat),1)
-p <- ncol(X)
-n <- nrow(X)
-Z <- matrix(Emissions_land$z)
+yx_land <- subset(yx,region %in% c("UK","Ireland"))       # consider land cells
+Dist_mat <- fields::rdist(Emissions_land[,c("x","y")])    # find distance matrix
+flux_cov_fn <- function(D,scale,nu) exp(-scale*(D^nu))    # flux cov. function (Gauss scale)
+
+## Check flux field with geoR
+library(geoR)
+geo_obj <- as.geodata(Emissions_land,coords.col = c("x","y"),data.col = "z")
+likfit(geo_obj,ini=c(0.5,0.5),fix.lambda=FALSE,fix.nugget=T) %>%
+    summary() %>% print()
+
+# X <- matrix(1,nrow(Dist_mat),1)
+# p <- ncol(X)
+# n <- nrow(X)
+# Z <- matrix(Emissions_land$z)
+
 #Z <- Emissions_land$z
 #Sigma_true <-  Sigma <- Matern(Dist_mat,range=1,smoothness=1.5)
 #Z <- as.vector(t(chol(Sigma_true)) %*% rnorm(nrow(Sigma_true)))
 #Z <- exp(Z)
-flux_cov_fn <- function(D,scale,nu) exp(-scale*(D^nu))
 
+#-------------------------------------------------------------------
+# 2. Data preprocessing
+#------------------------------------------------------------------
 
-# library(slice)
-# sampler <- slice::slice(3)
-# N <- 50000
-# burnin <- 1000
-# par_samp <- matrix(0,3,N)
-# par_samp[,1] <- c(0.5,1,1)
-# for (i in 2:N) {
-# #     par_samp[,i] <- sampler(par_samp[,(i-1)],
-# #                             log_f,
-# #                              learn = (i <= burnin))
-#      par_samp[,i] <- sampler(par_samp[,(i-1)],
-#                              log_f_theta_f,
-#                              learn = (i <= burnin),
-#                              Z = Z,
-#                              D = Dist_mat,
-#                              flux_cov_fn = flux_cov_fn,
-#                              X = X)
-#     print(i)
-# }
-#
 
 
 ### Create a list `Stations` with filenames of models/coordinates and
 ### station coordinates
-
 Stations <-list(MHD = list(model_filenames = c("../data/MHD_model_012014.txt",
                                                "../data/MHD_model_022014.txt",
                                                "../data/MHD_model_032014.txt"),
@@ -193,8 +184,6 @@ Stations <-list(MHD = list(model_filenames = c("../data/MHD_model_012014.txt",
 
 ##We have m_obs = 4 stations:
 m_obs <- length(Stations)
-
-
 
 ### Read model data from file and put into long table format and focus on UK
 ### I also should be multiplying by 1e9 but this produces VERY large numbers
@@ -310,9 +299,6 @@ read_process_data <- function(des,t_axis) {
 }
 
 
-### Preprocess
-### -------------------------------------------------------
-
 ## Read process models and form matrices in station list
 Stations <- md5_wrapper(lapply,Stations,read_process_models,prune=FALSE)
 
@@ -338,6 +324,7 @@ Emissions$B_RGL1 <- Stations$RGL$B[1,]
 Emissions$B_TTA1 <- Stations$TTA$B[1,]
 Emissions$B_TAC1 <- Stations$TAC$B[1,]
 
+# Plot the SRR on 01 Jan
 g_SRR <- LinePlotTheme() + geom_tile(data=subset(Emissions,x > -13 & x < 3 & y > 48 & y < 61),
                                  aes(x,y,fill=B_TTA1 + B_TAC1 + B_RGL1 + B_MHD1))  +
     #scale_fill_distiller(palette="BuPu",trans=c("sqrt"),guide = guide_legend(title="SRR (s/ng)")) +
@@ -392,7 +379,7 @@ C <- as(C,"dgCMatrix") ## convert to sparse matrix (actually diagonal)
 
 
 #-------------------------------------------------------------------
-# 3. Deal with missing observations (and simulate new ones if desired)
+# 3. Generate observations
 #------------------------------------------------------------------
 
 obs_locs <- t(sapply(Stations,                # extract station locs
@@ -427,9 +414,7 @@ if(!real_data) {
                                                      function(l) l$Obs_obj@df))
     idx <- which(s_obs$z > 0 & !is.na(s_obs$z))
 
-    warning("CHANGING OBSERVATIONS TO EDGAR PREDICTIVE ONES")
-    warning("CHANGING OBSERVATION ERRORS TO HAVE EXACT ERROR AND DISCREPANCY CHARACTERISTICS")
-    warning("CHANGING OBSERVATION ERRORS TO 1")
+    message("Setting observation measurement error to 1")
     Stations <- lapply(Stations,
                        function(x) {
                            x$Obs_obj["z"] <- as.numeric(x$C[which(!(colSums(x$C) == 0)),] %*%
@@ -471,15 +456,6 @@ if(!real_data) {
 ## Create observation precision matrix
 Qobs <- Diagonal(x=1/s_obs$std^2)
 
-#-----------------------
-# 4a. Check flux field with geoR
-#-----------------------
-library(geoR)
-geo_obj <- as.geodata(Emissions_land,coords.col = c("x","y"),data.col = "z")
-likfit(geo_obj,ini=c(0.5,0.5),fix.lambda=FALSE,fix.nugget=T)
-
-#ggplot(Emissions_land) + geom_tile(aes(x,y,fill=z))
-
 
 #-----------------------
 # 4. MCMC algorithm
@@ -512,12 +488,12 @@ Z <- s_obs$z
 
 
 ## Theta_f sample
-
-warning("Fixing lambda")
 if(grepl("Gaussian",model)) {
+    message("Fixing lambda to 1")
     lambda_fix = 1
     eps <- 0.210
 } else if(grepl("Lognormal",model)) {
+    message("Fixing lambda to 0")
     lambda_fix = 0
     eps = 0.146
 } else if(grepl("Box-Cox",model)) {
@@ -569,9 +545,7 @@ if(!real_data)
                                                         exp(theta_m_samp[3,1]))
 }
 
-library(foreach)
-library(doRNG)
-library(doMC)
+
 if(n_parallel > 1) registerDoMC(n_parallel)
 
 if(do_inference) {
@@ -638,7 +612,7 @@ if(do_inference) {
             if(i%%10 == 0)
                 cat(paste0("Sample: ",i," Acceptance rate: ",
                            (length(unique(Yf_samp[1,]))-1)/i,"\n"),
-                file=paste0("./inst/extdata/spastaMCMC/",model,
+                file=paste0("./tempresults/",model,
                             "_Chain_",j,"TI",true_inventory,"RD",real_data),
                 append=TRUE)
 
@@ -711,18 +685,16 @@ if(do_inference) {
 
     }
     if(!real_data)
-      save(All_Samps,file = paste0("./inst/extdata/spastaMCMC/Results_",model,"TI",true_inventory,".rda"))
+      save(All_Samps,file = paste0("./tempresults/Results_",model,"TI",true_inventory,".rda"))
     else
-      save(All_Samps,file = paste0("./inst/extdata/spastaMCMC/Results_",model,"TI",true_inventory,"_RD.rda"))
+      save(All_Samps,file = paste0("./tempresults/Results_",model,"TI",true_inventory,"_RD.rda"))
 }
 
-###########################
-### Now analyse the results
-###########################
+#-------------------------------------------------------------------
+# 5. Analyse results
+#------------------------------------------------------------------
 
-## Problematic chains
-
-## Only to be run in DEV mode
+## Problematic chains (Only to be run in DEV mode)
 if(0) {
   fnames <- dir("../atminv/inst/extdata/spastaMCMC/")[grepl("Chain",dir("../atminv/inst/extdata/spastaMCMC/"))]
   for (i in 1:length(fnames)) {
@@ -978,10 +950,13 @@ for(j in 1:6) {
     All_Samps <- combine_chains(All_Samps)
     tot_flux <- rbind(tot_flux,data.frame(Model = paste0("Model ",j), samp = apply(All_Samps[[1]]$Yf_samp,2,sum)*3600*24*365/10^12))
 }
+
 #load(paste0("Results_",models[1],"TI0.rda"))
-system.file("extdata",paste0("spastaMCMC/Results_",models[1],"TI0.rda"), package = "atminv")
+load(system.file("extdata",paste0("spastaMCMC/Results_",models[1],"TI0.rda"), package = "atminv"))
 All_Samps <- combine_chains(All_Samps)
-tot_flux <- rbind(tot_flux,data.frame(Model = "Model 1b", samp = apply(All_Samps[[1]]$Yf_samp,2,sum)*3600*24*365/10^12))
+tot_flux <- rbind(tot_flux,
+                  data.frame(Model = "Model 1*", 
+                             samp = apply(All_Samps[[1]]$Yf_samp,2,sum)*3600*24*365/10^12))
 group_by(tot_flux,Model) %>%
     summarise(mean = mean(samp),
               lq = quantile(samp,0.25),
@@ -999,14 +974,10 @@ if(save_images)
   ggsave(gg,file="./img/Fig6_tot_flux.pdf",height=8,width=12)
 
 ### Mole-fraction
-if(show_images) LinePlotTheme() + geom_point(data=s_obs,aes(t,z)) + facet_grid(obs_name~.)
+LinePlotTheme() + geom_point(data=s_obs,aes(t,z)) + facet_grid(obs_name~.)
 
 ### Mole fraction
 ###########################
-
-library(doRNG)
-library(doMC)
-#cl <- makeCluster(6, outfile="logparallel")
 
 rm(All_Samps)
 All_Samps_list <- list()
@@ -1021,7 +992,7 @@ load(system.file("extdata",paste0("spastaMCMC/Results_Box-CoxTI0.rda"), package 
 All_Samps_list[[7]] <- combine_chains(All_Samps)
 
 if(0) {
-  registerDoMC(7)
+  registerDoMC(4)
   print("Sampling mole fractions, this will take a while...")
   
   All_MFs <- foreach(All_Samps = All_Samps_list,.export='Q_norm_zeta_fn') %dorng% {

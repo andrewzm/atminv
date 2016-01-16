@@ -5,3 +5,4 @@
 *.log
 vignettes/chemo_sim_study-concordance.tex
 oldfiles
+tempresults
