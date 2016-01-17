@@ -1,4 +1,19 @@
-## Important: set wkdir to base path of package atminv if saving images or doing inference
+##################################################################################
+## Date: 05 January 2016
+## Author: Andrew Zammit-Mangion
+## Title: Reproducible code for Section 5 of 'Trans-Gaussian bivariate 
+## modelling with application to atmospheric trace-gas inversion' by Zammit-Mangion
+## et al.
+##
+## Notes: Follow the instructions on https://github.com/andrewzm/atminv
+## For re-evaluating all results it is recommended that you clone the source
+## package before running the following script as it is instructed to
+## save results to relative paths. It is also suggested that a server-grade
+## machine is used since multiple MCMC chains are used in this program (see
+## options for altering this below). Images are saved in img/ while results
+## are saved in tempresults/. When all is run (for all models) the contents in
+## tempresults should be the same as those in inst/extdata/spastaMCMC
+##################################################################################
 
 library(dplyr)
 library(tidyr)
@@ -131,21 +146,10 @@ geo_obj <- as.geodata(Emissions_land,coords.col = c("x","y"),data.col = "z")
 likfit(geo_obj,ini=c(0.5,0.5),fix.lambda=FALSE,fix.nugget=T) %>%
     summary() %>% print()
 
-# X <- matrix(1,nrow(Dist_mat),1)
-# p <- ncol(X)
-# n <- nrow(X)
-# Z <- matrix(Emissions_land$z)
-
-#Z <- Emissions_land$z
-#Sigma_true <-  Sigma <- Matern(Dist_mat,range=1,smoothness=1.5)
-#Z <- as.vector(t(chol(Sigma_true)) %*% rnorm(nrow(Sigma_true)))
-#Z <- exp(Z)
 
 #-------------------------------------------------------------------
 # 2. Data preprocessing
 #------------------------------------------------------------------
-
-
 
 ### Create a list `Stations` with filenames of models/coordinates and
 ### station coordinates
@@ -361,6 +365,10 @@ Emissions <- Emissions[id,]
 ## And only consider the SRRs on these grid cells
 Stations <- lapply(Stations,function(l) {  l$B <- l$B[,id]; l})
 
+#-------------------------------------------------------------------
+# 3. Model + matrix construction + simulate observations
+#------------------------------------------------------------------
+
 ## Now construct the big matrices we'll work with.
 ## First we start with B. Since we are organising our data as
 ## Obs1t1,Obs2t,...,Obs1t2,Obs2t2,... we have to interleave the B matrices:
@@ -377,10 +385,6 @@ C <- do.call(gdata::interleave,args = lapply(Stations,
     c() %>% diag()
 C <- as(C,"dgCMatrix") ## convert to sparse matrix (actually diagonal)
 
-
-#-------------------------------------------------------------------
-# 3. Generate observations
-#------------------------------------------------------------------
 
 obs_locs <- t(sapply(Stations,                # extract station locs
                      function(l) c(l$x,l$y)))
@@ -414,7 +418,7 @@ if(!real_data) {
                                                      function(l) l$Obs_obj@df))
     idx <- which(s_obs$z > 0 & !is.na(s_obs$z))
 
-    message("Setting observation measurement error to 1")
+    message("Setting measurement error to 1")
     Stations <- lapply(Stations,
                        function(x) {
                            x$Obs_obj["z"] <- as.numeric(x$C[which(!(colSums(x$C) == 0)),] %*%
@@ -455,39 +459,55 @@ if(!real_data) {
 
 ## Create observation precision matrix
 Qobs <- Diagonal(x=1/s_obs$std^2)
+Sobs <- solve(Qobs)
+Z <- s_obs$z
 
-
-#-----------------------
-# 4. MCMC algorithm
-#-----------------------
-
+## Create the "wrong" inventory from Europe
 Emissions_all$mask <- 0
 Emissions_all$mask[id + 14*63 - 15] <- 1  # Cut out England shape from France/Germany
 Emissions_land$z2 <- Emissions_all$z[Emissions_all$mask==1] # Pretend this is the inventory
 ggplot(Emissions_all) + geom_tile(aes(x=x,y=y,fill=mask)) +
-    geom_path(data=Europe,aes(x=long,y=lat,group=group))
+  geom_path(data=Europe,aes(x=long,y=lat,group=group))
 Emissions_map("z2")
 if(true_inventory) {
-    Zinv <- Emissions_land$z
+  Zinv <- Emissions_land$z
 } else {
-    Zinv <- Emissions_land$z2
+  Zinv <- Emissions_land$z2
 }
 
+## Create Covariate matrix X
 #X1 <- matrix(1,nrow(Dist_mat),1)
 Highlands <- which(Emissions_land$y > 56.4)
 X1 <- matrix(1,nrow(Dist_mat),2)
 X1[Highlands,1] <- 0
 X1[-Highlands,2] <- 0
 
+p1 <- ncol(X1) # number of covariates
+n1 <- nrow(X1) # number of flux field locations
 
-p1 <- ncol(X1)
-n1 <- nrow(X1)
+# plot simulation setup
+s_obs$obs_name <- as.character(s_obs$obs_name)
+s_obs <- s_obs %>%
+  within(obs_name[grepl("MHD",obs_name)]<- "MHD") %>%
+  within(obs_name[grepl("RGL",obs_name)]<- "RGL") %>%
+  within(obs_name[grepl("TAC",obs_name)]<- "TAC") %>%
+  within(obs_name[grepl("TTA",obs_name)]<- "TTA")
+g_stat_data <- LinePlotTheme() + geom_point(data=s_obs,
+                                            aes(x=t,y=z)) +
+  facet_grid(obs_name~.) +
+  ylab("background-enhanced mol. fraction (ppb)\n") +  xlab("t (2 h steps)") +
+  theme(axis.title.y=element_text(vjust=550))
+if(save_images)
+  ggsave(filename = "./img/Fig3_SRR_Station_data_simmed.pdf",
+         arrangeGrob(g_SRR,g_stat_data,ncol=2),
+         width=17,height=8)
 
-Sobs <- solve(Qobs)
-Z <- s_obs$z
+#-----------------------
+# 4. MCMC algorithm
+#-----------------------
 
-
-## Theta_f sample
+## Flux field parameters
+## Fix lambda based on model choice
 if(grepl("Gaussian",model)) {
     message("Fixing lambda to 1")
     lambda_fix = 1
@@ -502,10 +522,14 @@ if(grepl("Gaussian",model)) {
 } else {
     stop("model needs to be Gaussian, Lognormal or Box-Cox")
 }
+
+## Uniformly distributed step-size for HMC
 eps_gen <- function() runif(n=1,
                             min = eps,
                             max = eps+0.001)        # Step size generator for free lambda
 
+
+## Set up slice sampler for the flux field parameters
 if(!grepl("uncorrelated",model)) {
     nf <- 3 - !is.na(lambda_fix)
     theta_f_sampler <- slice::slice(nf)
@@ -519,19 +543,15 @@ if(!grepl("uncorrelated",model)) {
     if(!is.na(lambda_fix)) theta_f_samp[1,] <- lambda_fix
 }
 
-
-## Yf HMC sampler
-M <- diag(rep(1/100^2,n1))
-# eps_gen <- function() runif(n=1,
-#                             min = 0.18,
-#                             max = 0.181)        # Step size generator
-
-L <- 25L                                        # Number of steps for each sample
+## HMC parameters
+M <- diag(rep(1/100^2,n1))                      # scaling matrix
+L <- 25L                                        # number of steps for each sample
 Yf_samp <- matrix(0,nrow(M),N)                  # where to store the samples
-Yf_samp[,1] <- curr_Yf_samp <- pmax(Emissions$z + 30*rnorm(n1),10)      # first 'sample'
-Yf_accept <- rep(0,N)
+Yf_samp[,1] <- curr_Yf_samp <- pmax(Emissions$z + 30*rnorm(n1),10)  # first 'sample'
+Yf_accept <- rep(0,N)                           # initialise
 
-## Theta_m sampler
+## Mole-fraction field parameters
+## Construct slice sampler
 theta_m_sampler <- slice::slice(3)
 theta_m_samp <- matrix(0,3,N)
 theta_m_samp[,1] <- c(log(2000),0.7,log(2.5))
@@ -545,58 +565,66 @@ if(!real_data)
                                                         exp(theta_m_samp[3,1]))
 }
 
-
-if(n_parallel > 1) registerDoMC(n_parallel)
-
 if(do_inference) {
   print("Starting inference")
+
+  ## Initialise parallel backend for distributing the MCMC chains (Linux only)
+  if(n_parallel > 1) registerDoMC(n_parallel)
+  
+  
+  # For each parallel MCMC chain
   All_Samps <- foreach(j = 1:n_parallel,.export='Q_norm_zeta_fn') %dorng% {
 
+        for (i in 2:N) {  # for each sample
 
-        for (i in 2:N) {
-
-            if(grepl("uncorrelated",model)) {
+            
+          ## Sample the flux field parameters
+          if(grepl("uncorrelated",model)) {
                 S_f_trans <- diag(n1)
-                if(grepl("Box-Cox",model))
+                if(grepl("Box-Cox",model)) # if field is uncorrelated
                 {
-                    theta_f_samp[1,i] <- theta_f_sampler(theta_f_samp[1:nf,(i-1)],
-                                                         log_f_theta_f,
-                                                         learn = (i <= adapt),
-                                                         Z=cbind(Zinv,Yf_samp[,i-1]),
-                                                         D=Dist_mat,
-                                                         flux_cov_fn = flux_cov_fn,
-                                                         X=X1,
-                                                         lambda_fix=lambda_fix,
-                                                         uncorrelated=TRUE)
+                    theta_f_samp[1,i] <- theta_f_sampler(theta_f_samp[1:nf,(i-1)],  # previous sample
+                                                         log_f_theta_f,             # log-density
+                                                         learn = (i <= adapt),      # learning?
+                                                         Z=cbind(Zinv,Yf_samp[,i-1]), # data + inventory
+                                                         D=Dist_mat,                # distance matrix
+                                                         flux_cov_fn = flux_cov_fn, # flux cov. function
+                                                         X=X1,                      # covariates 
+                                                         lambda_fix=lambda_fix,     # lambda value
+                                                         uncorrelated=TRUE)         # uncorrelated?
                 }
                 current_lambda <- theta_f_samp[1,i]
-            } else {
-                theta_f_samp[1:nf,i] <- theta_f_sampler(theta_f_samp[1:nf,(i-1)],
-                                                        log_f_theta_f,
-                                                        learn = (i <= adapt),
-                                                        Z=cbind(Zinv,Yf_samp[,i-1]),
-                                                        D=Dist_mat,
-                                                        flux_cov_fn = flux_cov_fn,
-                                                        X=X1,
-                                                        lambda_fix=lambda_fix)
-                current_lambda <- theta_f_samp[3,i]
+            } else { # if field is correlated
+                theta_f_samp[1:nf,i] <- theta_f_sampler(theta_f_samp[1:nf,(i-1)],  # previous sample
+                                                        log_f_theta_f,             # log density
+                                                        learn = (i <= adapt),      # learning?
+                                                        Z=cbind(Zinv,Yf_samps[,i-1]), # data + inventory
+                                                        D=Dist_mat,                # distance matrix
+                                                        flux_cov_fn = flux_cov_fn, # flux cov. function
+                                                        X=X1,                      # covariates
+                                                        lambda_fix=lambda_fix)     # lambda value
+                current_lambda <- theta_f_samp[3,i]  # update lambda
 
-                S_f_trans <- flux_cov_fn(Dist_mat,
-                                         scale = theta_f_samp[1,i],
-                                         nu=theta_f_samp[2,i])
+                ## update flux correlation matrix. This is always the identity if the field is uncorrelated
+                S_f_trans <- flux_cov_fn(Dist_mat,                     # distance matrix
+                                         scale = theta_f_samp[1,i],    # scale parameter
+                                         nu=theta_f_samp[2,i])         # smoothness parameter
             }
 
-            Yf_cond <- Yf_BC_conditionals(Z = matrix(s_obs$z),      # training ob locs
-                                          Zinv = matrix(Zinv),
-                                          C_m = C ,      # incidence matrix
+            
+            ## Conditional distribution of the flux field
+            Yf_cond <- Yf_BC_conditionals(Z = matrix(s_obs$z),      # training obs locs
+                                          Zinv = matrix(Zinv),      # inventory
+                                          C_m = C ,       # incidence matrix
                                           Qobs = Qobs,    # precision matrix
                                           B = B,          # SRR
-                                          X = X1,
+                                          X = X1,         # covariates
                                           Q_zeta = Q_zeta,   # discrepancy cov matrix
                                           S_f_trans = S_f_trans/S_f_trans[1,1],  # covariance of log-flux field
-                                          lambda=current_lambda,            # indices to consider (all)
-                                          lambda_fix = lambda_fix)  
+                                          lambda=current_lambda,      # indices to consider (all)
+                                          lambda_fix = lambda_fix)    # lambda value
                                           
+            ## Sample the flux field
             Yf_sampler <- hmc_sampler(U = Yf_cond$logf,        # log density
                                       dUdq = Yf_cond$gr_logf,  # gradient of log density
                                       M = M,                # scaling matrix
@@ -605,9 +633,11 @@ if(do_inference) {
                                       lower = rep(0,ncol(B)))  # lower-bound (0)
 
 
-
+            ## Generate flux field sample
             curr_Yf_samp <- Yf_sampler(q = curr_Yf_samp)
             Yf_samp[,i] <- curr_Yf_samp
+            
+            ## Every 10 samples, save the acceptance rate to file
             #print(paste0("Sample: ",i," Acceptance rate: ",(length(unique(Yf_samp[1,]))-1)/i))
             if(i%%10 == 0)
                 cat(paste0("Sample: ",i," Acceptance rate: ",
@@ -618,45 +648,56 @@ if(do_inference) {
 
             if(!all(curr_Yf_samp == Yf_samp[,i-1])) Yf_accept[i] <- 1
 
-            if(((i < 100 & i > 10) | ((i-1)%%10==0)) & i < adapt) { # Evaluate every 10th sample with quick adaptation in beginning
-                ## Adapt HMC stepsize
-                if(sum(Yf_accept[(i-10):i]) == 0) {
+            ## Every 10th sample with quick adaptation in beginning adjust HMC stepsize
+            if(((i < 100 & i > 10) | ((i-1)%%10==0)) & i < adapt) { 
+                
+              # if poor acceptance reduce stepsize
+                if(sum(Yf_accept[(i-10):i]) == 0) { 
                     eps = eps*0.9; print(paste0("New stepsize = ", eps))
                 }
+                
+              # if too much acceptance  increase stepsize
                 if(sum(Yf_accept[(i-10):i]) >= 9) {
                     if(grepl("uncorrelated",model))
-                    {           eps_max <- 1
-                    } else { eps_max <- 1}
-                    #eps = min(eps*1.1,0.3); print(paste0("New stepsize = ", eps))
+                    {           
+                      eps_max <- 1
+                    } else 
+                      { eps_max <- 1}
                     eps =min(eps*1.1,eps_max); print(paste0("New stepsize = ", eps))
                 }
+                
+              # Update stepsize generator
                 eps_gen <- function() runif(n=1,
                                             min = eps,         # 0.07 with original stds
                                             max = eps + 0.001)        # Step size generator for free lambda
             }
 
 
+            ## Sample mole-fraction field parameters
+            theta_m_samp[,i] <- theta_m_sampler(theta_m_samp[,(i-1)],   # previous samples
+                                                log_f_theta_m,          # log density
+                                                learn = (i <= adapt),   # learning?
+                                                Yf=curr_Yf_samp,        # flux field
+                                                s = obs_locs,           # observation locations
+                                                t = t_axis,             # time axis
+                                                C_m = C,                # incidence matrix
+                                                Qobs = Qobs,            # obs. precision matrix
+                                                Z = Z,                  # data
+                                                B = B,                  # SRR
+                                                Q_zeta_fn = Q_norm_zeta_fn)  # discr. precision matrix
 
-              theta_m_samp[,i] <- theta_m_sampler(theta_m_samp[,(i-1)],
-                                                log_f_theta_m,
-                                                learn = (i <= adapt),
-                                                Yf=curr_Yf_samp,
-                                                s = obs_locs,
-                                                t = t_axis,
-                                                C_m = C,
-                                                Qobs = Qobs,
-                                                Z = Z,
-                                                B = B,
-                                                Q_zeta_fn = Q_norm_zeta_fn)
-
-
-            Q_zeta <- (1/exp(theta_m_samp[1,i])) * Q_norm_zeta_fn(obs_locs,
-                                                                  t_axis,
-                                                                  theta_m_samp[2,i],
+            ## Update discrepancy precision matrix
+            Q_zeta <- (1/exp(theta_m_samp[1,i])) * Q_norm_zeta_fn(obs_locs,           # obs. locations
+                                                                  t_axis,             # time axis
+                                                                  theta_m_samp[2,i],  # new samples
                                                                   exp(theta_m_samp[3,i]))
 
         }
-        sub_samp <- seq(burnin,N,by=dither)
+    
+        ## MCMC chain complete.. now dither the chain
+        sub_samp <- seq(burnin,N,by=dither) 
+        
+        ## Save data
         if(!real_data) {
           return(list(model = model,
              i = i,
@@ -694,7 +735,7 @@ if(do_inference) {
 # 5. Analyse results
 #------------------------------------------------------------------
 
-## Problematic chains (Only to be run in DEV mode)
+## See if there are any problematic chains (Only to be run in DEV mode)
 if(0) {
   fnames <- dir("../atminv/inst/extdata/spastaMCMC/")[grepl("Chain",dir("../atminv/inst/extdata/spastaMCMC/"))]
   for (i in 1:length(fnames)) {
@@ -713,6 +754,7 @@ models <- c("Box-Cox","Lognormal","Gaussian","Box-Cox.uncorrelated",
 model_names <- paste0("Model ",1:6)
 e_bi <- 1 #extra burnin
 
+## Combine the parallel chains into one long one
 combine_chains <- function(l) {
   new_l <- list(Yf_samp = NULL, theta_f_samp = NULL, theta_m_samp = NULL)
   #print("Discarding Chain 9 from each model")    
@@ -729,17 +771,26 @@ combine_chains <- function(l) {
   list(new_l)
 }
 
-### Parameters
+###########################
+### Parameters posterior
 ###########################
 
+# Load model 1
 #load(paste0("Results_",models[1],"TI1.rda"))
 load(system.file("extdata",paste0("spastaMCMC/Results_",models[1],"TI1.rda"), package = "atminv"))
-Nsamp <- (dim(All_Samps[[1]]$theta_m_samp)[2]-e_bi) * 10
-df_par <- data.frame(n = 1:Nsamp)
+
+# Posterior median of emissions for Model 1
 Emissions_land$post <- apply(All_Samps[[1]]$Yf_samp,1,median)
 if(save_images)
   ggsave(Emissions_map("post"),filename = "./img/median_flux_post.png")
 
+# Number of samples
+Nsamp <- (dim(All_Samps[[1]]$theta_m_samp)[2]-e_bi) * 10
+
+# Initialise data frame
+df_par <- data.frame(n = 1:Nsamp)
+
+# For each model add six columns corresponding the the sampled parameters (on original scale)
 for(i in 1:6) {
     #load(paste0("Results_",models[i],"TI1.rda"))
     load(system.file("extdata",paste0("spastaMCMC/Results_",models[i],"TI1.rda"), package = "atminv"))
@@ -760,13 +811,15 @@ for(i in 1:6) {
 
 }
 
+## Now put the data frame into long form
 df_par2 <- gather(df_par,par,sample,-n) %>%
     separate(par,c("Model","par"),sep="_") %>%
     mutate(process=ifelse(grepl("m",par),"Mole-fraction","Flux"))
 
-## Study chains
+## Visalise some of the chains to make sure they make sense
 ggplot(subset(df_par2, Model=="Model 5")) + geom_point(aes(x=n,y=sample)) + facet_grid(par~.,scales="free")
 
+## Labeller function for labelling the facets
 my.label_bquote <- function(variable, value) {
     value <- as.character(value)
     if(variable == 'par')
@@ -786,10 +839,7 @@ my.label_bquote <- function(variable, value) {
             })
 }
 
-g1 <- LinePlotTheme() + geom_boxplot(data=subset(df_par2,process=="Flux"),aes(x=Model,y=sample)) +
-    facet_grid(par~.,scales="free",labeller =my.label_bquote) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
+## Plot the posterior distributions of the flux parameters
 g1 <- LinePlotTheme() + 
     geom_density(data=subset(df_par2,process=="Flux"),aes(x=sample,linetype=Model),fill="black",alpha=0.1,adjust=2) +
     geom_density(data=subset(df_par2,process=="Flux"),aes(x=sample,linetype=Model),adjust=2) +
@@ -798,11 +848,12 @@ g1 <- LinePlotTheme() +
   theme(legend.position="bottom") +
   scale_linetype_manual(values = c(1:4)) + xlab("")
 
-
+## Plot the posterior distributions of the mole-fraction parameters
 g2 <- LinePlotTheme() + geom_boxplot(data=subset(df_par2,process=="Mole-fraction"),aes(x=Model,y=sample)) +
   facet_grid(par~.,scales="free",labeller =my.label_bquote) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ylab("")
 
+## Save the image
 g_all <- arrangeGrob(g1,g2,ncol=2)
 if(save_images)
   ggsave(filename = "./img/Fig4_theta_post.pdf",
@@ -810,55 +861,80 @@ if(save_images)
          width = 17,height=8)
 
 
-# Mean of lambda
+## Find the posterior mean of lambda in Model 1
 #load(paste0("Results_",models[1],"TI1.rda"))
 load(system.file("extdata",paste0("spastaMCMC/Results_",models[1],"TI1.rda"), package = "atminv"))
 All_Samps <- combine_chains(All_Samps)
 mean(All_Samps[[1]]$theta_f_samp[3,])
 
-
-### Flux
+###########################
+### Flux field posterior
 ###########################
 
+## Initialise data frame
 df_flux <- data.frame(n = 1:Nsamp)
+
+## Initialise data frame for MAE, CRPS quantiles
 MAE_flux <- crps_flux <- data.frame(Model = 1:6,LQ = 0, Median = 0, UQ =0)
+
+## Initialise data frame for errors 
 error_flux <- data.frame(Model = 1:6, MAPE = 0, RMSPE = 0,MCRPS=0)
 
-for(corr in c(1,0))
-for(i in 1:6) {
-    #if(file.exists(paste0("Results_",models[i],"TI",corr,".rda"))) {
-    if(file.exists(system.file("extdata",paste0("spastaMCMC/Results_",models[i],"TI",corr,".rda"), 
-                               package = "atminv"))) {
-        #load(paste0("Results_",models[i],"TI",corr,".rda"))
-        load(system.file("extdata",paste0("spastaMCMC/Results_",models[i],"TI",corr,".rda"), package = "atminv"))
-        All_Samps <- combine_chains(All_Samps)
-        Yf_samp <- All_Samps[[1]]$Yf_samp
-        ii <- i + (!corr)*6
-        Emissions_land[paste0("crps",ii)] <- 0
-        Emissions_land[paste0("cdf", ii)] <- 0
-        Emissions_land[paste0("error",ii)] <- apply(Yf_samp,1,mean) - Emissions_land$z
-        for (j in 1:nrow(Emissions_land)){
-            Emissions_land[paste0("cdf",ii)][j,] <- ecdf(Yf_samp[j,1000:(i-1)])(Emissions_land$z[j])
-            Emissions_land[paste0("crps",ii)][j,] <- sum((ecdf(Yf_samp[j,])(0:5000) -
-                                                             as.numeric((0:5000)>Emissions_land$z[j]))^2) * 1 #unit grid width
+## for both the true inventory and wrong inventory models
+for(TI in c(1,0))
+  for(i in 1:6) {
+      #if(file.exists(paste0("Results_",models[i],"TI",TI,".rda"))) {
+      if(file.exists(system.file("extdata",paste0("spastaMCMC/Results_",models[i],"TI",TI,".rda"), 
+                                 package = "atminv"))) {
+          #load(paste0("Results_",models[i],"TI",TI,".rda"))
+          
+          # load file 
+          load(system.file("extdata",paste0("spastaMCMC/Results_",models[i],"TI",TI,".rda"), package = "atminv"))
+          
+          # combine chains
+          All_Samps <- combine_chains(All_Samps)
+          
+          # extract flux samples
+          Yf_samp <- All_Samps[[1]]$Yf_samp
+          
+          # model number (accounting for false inventory model, Model 7)
+          ii <- i + (!TI)*6
+          
+          # initialise crps, cdf and error fields
+          Emissions_land[paste0("crps",ii)] <- 0
+          Emissions_land[paste0("cdf", ii)] <- 0
+          Emissions_land[paste0("error",ii)] <- apply(Yf_samp,1,mean) - Emissions_land$z
+          
+          # for each flux field location
+          for (j in 1:nrow(Emissions_land)){
+            
+              # find the ECDF at this location
+              Emissions_land[paste0("cdf",ii)][j,] <- ecdf(Yf_samp[j,1000:(i-1)])(Emissions_land$z[j])
+              # compute the CRPS
+              Emissions_land[paste0("crps",ii)][j,] <- sum((ecdf(Yf_samp[j,])(0:5000) -
+                                                               as.numeric((0:5000)>Emissions_land$z[j]))^2) * 1 #unit grid width
+          }
+          ## add CRPS to CRPS data frame
+          crps_flux[ii,] <- c(ii, quantile(unlist(Emissions_land[paste0("crps",i)]),
+                                         c(0.25,0.5,0.75)))
+          
+          ## add MAE to MAE data frame
+          MAE_flux[ii*6,] <- c(i + (!TI)*6, quantile(mean(abs(unlist(Emissions_land[paste0("error",i)]))),
+                                                     c(0.25,0.5,0.75)))
+          
+          ## add errors to error data frame
+          error_flux[ii,] <- c(ii, mean(abs(unlist(Emissions_land[paste0("error",ii)]))),
+                              sqrt(mean(abs(unlist(Emissions_land[paste0("error",ii)]))^2)),
+                              mean(unlist(Emissions_land[paste0("crps",ii)])))
+          }
+  }
 
-        }
-        print(paste0("Flux CRPSs for Model ",i,":"))
-        crps_flux[ii,] <- c(ii, quantile(unlist(Emissions_land[paste0("crps",i)]),
-                                       c(0.25,0.5,0.75)))
-        MAE_flux[ii*6,] <- c(i + (!corr)*6, quantile(mean(abs(unlist(Emissions_land[paste0("error",i)]))),
-                                                   c(0.25,0.5,0.75)))
-        error_flux[ii,] <- c(ii, mean(abs(unlist(Emissions_land[paste0("error",ii)]))),
-                            sqrt(mean(abs(unlist(Emissions_land[paste0("error",ii)]))^2)),
-                            mean(unlist(Emissions_land[paste0("crps",ii)])))
-        }
-}
+## print LaTeX table of flux diagnostics
 print(xtable::xtable(error_flux,digits=c(NA,1,1,1,1)),
       include.rownames=FALSE)
 
 
-
-### Gaussian vs Box-Cox vs Lognormal
+## Compare the Gaussian vs Box-Cox vs Lognormal
 Emissions_land$wtf <- (abs(Emissions_land$error1)  < abs(Emissions_land$error3))
 g1 <- Emissions_map("wtf") + scale_fill_distiller(breaks=c(0,1), guide = guide_legend(title="")) +
     ggtitle("Model 1 vs. Model 3")
@@ -868,10 +944,8 @@ g2 <- Emissions_map("wtf")+ scale_fill_distiller(breaks=c(0,1), guide = guide_le
 if(save_images) {
   ggsave(g1,filename = "./img/error_map1.png",width = 8,height=10)
   ggsave(g2,filename = "./img/error_map2.png",width = 8,height=10)
-}
 
-if(save_images) {
-  png(filename="qqplots.png",width = 4000,height=1600,res = 300)
+  png(filename="./img/qqplots.png",width = 4000,height=1600,res = 300)
   par(mfrow=c(1,3))
   qqnorm(Emissions_land$z,ylim=c(-600,2500),main="Identity"); qqline(Emissions$z)
   qqnorm(Emissions_land$z^0.5,main="Square root"); qqline(Emissions$z^0.5)
@@ -879,6 +953,7 @@ if(save_images) {
   dev.off()
 }
 
+## some plots of errors of Model A vs errors of Model B (not included in paper)
 par(mfrow=c(1,2))
 plot(Emissions_land$error1 - Emissions_land$error2,
      ylim = c(-300,200),
@@ -891,14 +966,16 @@ plot(Emissions_land$error1 - Emissions_land$error3,
      xlab = "Location index");  lines(c(0,124),c(0,0),lty=2)
 dev.off()
 
-
-
-## Arrange samples into a long data frame
-#load(paste0("Results_",models[1],"TI0.rda"))
-load(system.file("extdata",paste0("spastaMCMC/Results_",models[1],"TI0.rda"), package = "atminv"))
+## VIOLIN PLOT
+## Load Box-Cox results
+#load(paste0("Results_",models[1],"TI1.rda"))
+load(system.file("extdata",paste0("spastaMCMC/Results_",models[1],"TI1.rda"), package = "atminv"))
 All_Samps <- combine_chains(All_Samps)
 
+## Extract flux field parameters
 Yf_samp <- All_Samps[[1]]$Yf_samp
+
+## Arrange samples into a long data frame
 Q <- as.data.frame(t(Yf_samp)) %>%
     tidyr::gather(t,z) %>%
     separate(t, into=c("V","s"),sep="V") %>%
@@ -914,12 +991,12 @@ Q2 <- left_join(Q,select(mutate(Emissions,NAEI=z),
         mutate(med_z = median(z)) %>%
         as.data.frame()
 
+## facet labeller
 dec_labeller <- function(variable, value) {
     lapply(as.numeric(value),function(x) round(x,1))
 }
 
-
-## Violin Plot of Ireland
+## Plot the violin plot
 if(save_images) {
     violin_plot <- ggplot(mutate(Q2,y=-y)) +
         geom_rect(data = mutate(Emissions_land,y=-y),
@@ -939,33 +1016,45 @@ if(save_images) {
     ggsave(violin_plot,filename = "./img/Fig5_violin_plot.png",height=12,width=12)
 }
 
-
-## TOTAL FLUX
 ###############
+## Total flux
+###############
+
+## Initialise data frame
 tot_flux <- data.frame(Model = NULL,samp = NULL)
+
+## For each model compute the total flux in each sample
 for(j in 1:6) {
-    ## Arrange samples into a long data frame
     #load(paste0("Results_",models[j],"TI1.rda"))
     load(system.file("extdata",paste0("spastaMCMC/Results_",models[j],"TI1.rda"), package = "atminv"))
     All_Samps <- combine_chains(All_Samps)
-    tot_flux <- rbind(tot_flux,data.frame(Model = paste0("Model ",j), samp = apply(All_Samps[[1]]$Yf_samp,2,sum)*3600*24*365/10^12))
+    tot_flux <- rbind(tot_flux,
+                      data.frame(Model = paste0("Model ",j), 
+                                 samp = apply(All_Samps[[1]]$Yf_samp,2,sum)*3600*24*365/10^12))
 }
 
+## Add on Model 1* (Model 7 in this program)
 #load(paste0("Results_",models[1],"TI0.rda"))
 load(system.file("extdata",paste0("spastaMCMC/Results_",models[1],"TI0.rda"), package = "atminv"))
 All_Samps <- combine_chains(All_Samps)
 tot_flux <- rbind(tot_flux,
                   data.frame(Model = "Model 1*", 
                              samp = apply(All_Samps[[1]]$Yf_samp,2,sum)*3600*24*365/10^12))
+
+## Table of aggregates
 group_by(tot_flux,Model) %>%
     summarise(mean = mean(samp),
               lq = quantile(samp,0.25),
               uq = quantile(samp,0.75),
               s2 = mean(samp) - 2*sd(samp))
 
+## Total flux in UK + Ireland in the correct inventory
 tot_UK_Ir <- sum(Emissions_land$z*3600*24*365/10^12)
+
+## Total flux in the wrong (Europe) inventory
 tot_Europe <- sum(Emissions_land$z2*3600*24*365/10^12)
 
+## Plot the bar chart of aggregates
 gg <- LinePlotTheme() + geom_boxplot(data=tot_flux,aes(x=Model,y=samp)) +
     coord_flip() +
     geom_line(data=data.frame(y=c(tot_UK_Ir,tot_UK_Ir),x=c(0,8)),aes(x,y),linetype="dashed") +
@@ -976,42 +1065,62 @@ if(save_images)
 ### Mole-fraction
 LinePlotTheme() + geom_point(data=s_obs,aes(t,z)) + facet_grid(obs_name~.)
 
-### Mole fraction
-###########################
+#############################################
+### Posterior distribution of mole fraction
+#############################################
 
-rm(All_Samps)
+## Initialise list
 All_Samps_list <- list()
+
+# Put all the samples (for each model) into one big list
 for(j in 1:6){
     #load(paste0("Results_",models[j],"TI1.rda"))
     load(system.file("extdata",paste0("spastaMCMC/Results_",models[j],"TI1.rda"), package = "atminv"))
     All_Samps <- combine_chains(All_Samps)
     All_Samps_list[[j]] <- All_Samps
 }
+
+## Add on Model 1*
 #load(paste0("Results_Box-CoxTI0.rda"))
 load(system.file("extdata",paste0("spastaMCMC/Results_Box-CoxTI0.rda"), package = "atminv"))
 All_Samps_list[[7]] <- combine_chains(All_Samps)
 
+## To compute this set to if(1). 
 if(0) {
+  
+  # parallelise using 4 cores
   registerDoMC(4)
   print("Sampling mole fractions, this will take a while...")
   
+  ## for each model
   All_MFs <- foreach(All_Samps = All_Samps_list,.export='Q_norm_zeta_fn') %dorng% {
+      
+      # extract the relevant quantities
       Yf_samp <- All_Samps[[1]]$Yf_samp
       theta_m_samp <- All_Samps[[1]]$theta_m_samp
       theta_f_samp <- All_Samps[[1]]$theta_f_samp
 
+      # use only 1000 samples from what we have (should be sufficient)
       use_samps <- round(seq(1,Nsamp,length=1000))
       Ns <- length(use_samps)
-      mf_samp <- matrix(0,nrow(B),Ns)                          # initialise mole-fraction sample matrix
+      
+      # initialise mole-fraction sample matrix
+      mf_samp <- matrix(0,nrow(B),Ns)         
       cnt <- 1
-
+      
+      # for each sample
       for (i in use_samps){
+          # construct discrepancy precision matrix
           Q_zeta <- (1/exp(theta_m_samp[1,i])) * Q_norm_zeta_fn(obs_locs,
                                                                 t_axis,
                                                                 theta_m_samp[2,i],
                                                                 exp(theta_m_samp[3,i]))
-          Q_post <- t(C) %*% Qobs %*% C + Q_zeta    # Compute posterior precision
+          
+          # posterior precision matrix
+          Q_post <- t(C) %*% Qobs %*% C + Q_zeta
           X <- cholPermute(Q_post)
+          
+          # standard Gaussian sampling
           SQB <- linalg:::cholsolve(Q_post,Q_zeta %*% B,cholQp = X$Qpermchol, P = X$P)
           StCQoz <- linalg:::cholsolve(Q_post,(t(C) %*% Qobs %*% Z),
                                        cholQp = X$Qpermchol, P = X$P)
@@ -1020,60 +1129,58 @@ if(0) {
           mf_samp[,cnt] <- sample_GMRF(this_GMRF,L=X$Qpermchol,P=X$P)
           cnt <- cnt + 1
       }
+      
+      # save into list
       list(mf_samp = mf_samp,
            mf_mean = apply(mf_samp,1,mean),
            mf_lq = apply(mf_samp,1,quantile,0.25),
            mf_uq = apply(mf_samp,1,quantile,0.75))
   }
   
-  
+  # plot mole fractions and observations for Model 1 (sanity check)
   s_obs_orig$mf_mean <- All_MFs[[1]]$mf_mean
   LinePlotTheme() + geom_point(data=s_obs_orig,aes(t,z)) +
     geom_line(data=s_obs_orig,aes(t,mf_mean),col="red") +
     facet_grid(obs_name~.)
   
+  # create the diagnostic mole-fraction data frame and initialise
   MF_df <- data.frame(MAPE=0,MSPE=0,CRPS=0)
-  this_crps <- cnt <- 0
   crps_axis <- seq(-100,200,by=0.1)
+  
+  # for each model
   for (j in 1:7){
+    
+    # extract the mean
     All_MFs[[j]]$mf_mean
+    
+    # initialise count
+    this_crps <- cnt <- 0
+    
+    # for every unobserved location
     for (i in setdiff(1:nrow(s_obs_orig),idx)){
+      
+      # find the CRPS at this location
       cnt <- cnt + 1
       this_crps[cnt] <- sum((ecdf(All_MFs[[j]]$mf_samp[i,])(crps_axis) -
                                as.numeric((crps_axis)>s_obs_orig$Ymf[i]))^2) * 0.1 #unit grid width
     }
     
+    # compute the diagnostics for all locations
     MF_df[j,] <- c(mean(abs(All_MFs[[j]]$mf_mean[-idx] - s_obs_orig$Ymf[-idx])),
                    sqrt(mean((All_MFs[[j]]$mf_mean[-idx] - s_obs_orig$Ymf[-idx])^2)),
                    mean(this_crps))
   }
 
-  save(MF_df,file = "MF_df.rda")
+  # save results for quick load
+  save(MF_df,file = "./tempresults/MF_df.rda")
 } else {
   #load("MF_df.rda")
   load(system.file("extdata",paste0("spastaMCMC/MF_df.rda"), package = "atminv"))
 }
 
+## print both the flux and mole-fraction diagnostics side-by-side
 print(xtable::xtable(cbind(error_flux,MF_df),
                      align = c("c","|c", "|c", "c", "c", "|c","c","c|"),
                      digits=c(NA,1,1,1,1,1,1,1)),
       include.rownames=FALSE)
 
-
-
-## OTHER PLOTS
-s_obs$obs_name <- as.character(s_obs$obs_name)
-s_obs <- s_obs %>%
-  within(obs_name[grepl("MHD",obs_name)]<- "MHD") %>%
-  within(obs_name[grepl("RGL",obs_name)]<- "RGL") %>%
-  within(obs_name[grepl("TAC",obs_name)]<- "TAC") %>%
-  within(obs_name[grepl("TTA",obs_name)]<- "TTA")
-g_stat_data <- LinePlotTheme() + geom_point(data=s_obs,
-                                            aes(x=t,y=z)) +
-  facet_grid(obs_name~.) +
-  ylab("background-enhanced mol. fraction (ppb)\n") +  xlab("t (2 h steps)") +
-  theme(axis.title.y=element_text(vjust=550))
-if(save_images)
-  ggsave(filename = "./img/Fig3_SRR_Station_data_simmed.pdf",
-         arrangeGrob(g_SRR,g_stat_data,ncol=2),
-         width=17,height=8)
