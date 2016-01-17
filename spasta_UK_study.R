@@ -6,13 +6,10 @@
 ## et al.
 ##
 ## Notes: Follow the instructions on https://github.com/andrewzm/atminv
-## For re-evaluating all results it is recommended that you clone the source
-## package before running the following script as it is instructed to
-## save results to relative paths. It is also suggested that a server-grade
-## machine is used since multiple MCMC chains are used in this program (see
-## options for altering this below). Images are saved in img/ while results
-## are saved in tempresults/. When all is run (for all models) the contents in
-## tempresults should be the same as those in inst/extdata/spastaMCMC.
+## It is suggested that a server-grade machine is used since multiple MCMC chains
+## are used in this program (see options for altering this below). For full
+## reproducibility create a folder img/ in which to create images and tempresults/
+## in which to store the results.
 ##################################################################################
 
 library(dplyr)
@@ -35,7 +32,7 @@ library(doMC)           # for parallel computations
 
 rm(list=ls())
 
-save_images   <- 1      # save images?
+save_images   <- 0      # save images?
 N             <- 12000  # number of MCMC samples per chain
 adapt         <- 1000   # number of adaptation samples
 burnin        <- 8000   # number of burnin samples (incl. adaptation)
@@ -565,22 +562,12 @@ if(!real_data)
                                                         exp(theta_m_samp[3,1]))
 }
 
-<<<<<<< HEAD
 if(do_inference) {
   print("Starting inference")
 
   ## Initialise parallel backend for distributing the MCMC chains (Linux only)
   if(n_parallel > 1) registerDoMC(n_parallel)
-  
-  
-=======
-## Initialise parallel backend for distributing the MCMC chains (Linux only)
-if(n_parallel > 1) registerDoMC(n_parallel)
 
-if(do_inference) {
-  print("Starting inference")
-
->>>>>>> 1a1fe5106a9c9e36a1ad049f67ecf777c89ec060
   # For each parallel MCMC chain
   All_Samps <- foreach(j = 1:n_parallel,.export='Q_norm_zeta_fn') %dorng% {
 
@@ -607,25 +594,7 @@ if(do_inference) {
                 theta_f_samp[1:nf,i] <- theta_f_sampler(theta_f_samp[1:nf,(i-1)],  # previous sample
                                                         log_f_theta_f,             # log density
                                                         learn = (i <= adapt),      # learning?
-<<<<<<< HEAD
                                                         Z=cbind(Zinv,Yf_samps[,i-1]), # data + inventory
-=======
-                                                        Z=cbind(Zinv,Yf_samps_obs$obs_name <- as.character(s_obs$obs_name)
-                                                                s_obs <- s_obs %>%
-                                                                  within(obs_name[grepl("MHD",obs_name)]<- "MHD") %>%
-                                                                  within(obs_name[grepl("RGL",obs_name)]<- "RGL") %>%
-                                                                  within(obs_name[grepl("TAC",obs_name)]<- "TAC") %>%
-                                                                  within(obs_name[grepl("TTA",obs_name)]<- "TTA")
-                                                                g_stat_data <- LinePlotTheme() + geom_point(data=s_obs,
-                                                                                                            aes(x=t,y=z)) +
-                                                                  facet_grid(obs_name~.) +
-                                                                  ylab("background-enhanced mol. fraction (ppb)\n") +  xlab("t (2 h steps)") +
-                                                                  theme(axis.title.y=element_text(vjust=550))
-                                                                if(save_images)
-                                                                  ggsave(filename = "./img/Fig3_SRR_Station_data_simmed.pdf",
-                                                                         arrangeGrob(g_SRR,g_stat_data,ncol=2),
-                                                                         width=17,height=8)[,i-1]), # data + inventory
->>>>>>> 1a1fe5106a9c9e36a1ad049f67ecf777c89ec060
                                                         D=Dist_mat,                # distance matrix
                                                         flux_cov_fn = flux_cov_fn, # flux cov. function
                                                         X=X1,                      # covariates
@@ -907,7 +876,6 @@ MAE_flux <- crps_flux <- data.frame(Model = 1:6,LQ = 0, Median = 0, UQ =0)
 ## Initialise data frame for errors 
 error_flux <- data.frame(Model = 1:6, MAPE = 0, RMSPE = 0,MCRPS=0)
 
-<<<<<<< HEAD
 ## for both the true inventory and wrong inventory models
 for(TI in c(1,0))
   for(i in 1:6) {
@@ -956,26 +924,6 @@ for(TI in c(1,0))
                               mean(unlist(Emissions_land[paste0("crps",ii)])))
           }
   }
-=======
-## for both the correlated and uncorrelated and all
-for(corr in c(1,0))
-for(i in 1:6) {
-    #if(file.exists(paste0("Results_",models[i],"TI",corr,".rda"))) {
-    if(file.exists(system.file("extdata",paste0("spastaMCMC/Results_",models[i],"TI",corr,".rda"), 
-                               package = "atminv"))) {
-        #load(paste0("Results_",models[i],"TI",corr,".rda"))
-        load(system.file("extdata",paste0("spastaMCMC/Results_",models[i],"TI",corr,".rda"), package = "atminv"))
-        All_Samps <- combine_chains(All_Samps)
-        Yf_samp <- All_Samps[[1]]$Yf_samp
-        ii <- i + (!corr)*6
-        Emissions_land[paste0("crps",ii)] <- 0
-        Emissions_land[paste0("cdf", ii)] <- 0
-        Emissions_land[paste0("error",ii)] <- apply(Yf_samp,1,mean) - Emissions_land$z
-        for (j in 1:nrow(Emissions_land)){
-            Emissions_land[paste0("cdf",ii)][j,] <- ecdf(Yf_samp[j,1000:(i-1)])(Emissions_land$z[j])
-            Emissions_land[paste0("crps",ii)][j,] <- sum((ecdf(Yf_samp[j,])(0:5000) -
-                                                             as.numeric((0:5000)>Emissions_land$z[j]))^2) * 1 #unit grid width
->>>>>>> 1a1fe5106a9c9e36a1ad049f67ecf777c89ec060
 
 ## print LaTeX table of flux diagnostics
 print(xtable::xtable(error_flux,digits=c(NA,1,1,1,1)),
@@ -1068,10 +1016,7 @@ if(save_images) {
 ## Total flux
 ###############
 
-<<<<<<< HEAD
 ## Initialise data frame
-=======
->>>>>>> 1a1fe5106a9c9e36a1ad049f67ecf777c89ec060
 tot_flux <- data.frame(Model = NULL,samp = NULL)
 
 ## For each model compute the total flux in each sample
