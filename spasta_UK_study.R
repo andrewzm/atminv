@@ -12,7 +12,7 @@
 ## machine is used since multiple MCMC chains are used in this program (see
 ## options for altering this below). Images are saved in img/ while results
 ## are saved in tempresults/. When all is run (for all models) the contents in
-## tempresults should be the same as those in inst/extdata/spastaMCMC
+## tempresults should be the same as those in inst/extdata/spastaMCMC.
 ##################################################################################
 
 library(dplyr)
