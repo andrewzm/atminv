@@ -8,8 +8,8 @@
 ## Notes: Follow the instructions on https://github.com/andrewzm/atminv
 ## It is suggested that a server-grade machine is used since multiple MCMC chains
 ## are used in this program (see options for altering this below). For full
-## reproducibility create a folder img/ in which to create images and tempresults/
-## in which to store the results.
+## reproducibility create a folder img/ in which to create images, tempresults/
+## in which to store the results and ~/cache/Assim for temporarily storing results.
 ##################################################################################
 
 library(dplyr)
@@ -326,23 +326,24 @@ Emissions$B_TTA1 <- Stations$TTA$B[1,]
 Emissions$B_TAC1 <- Stations$TAC$B[1,]
 
 # Plot the SRR on 01 Jan
-g_SRR <- LinePlotTheme() + geom_tile(data=subset(Emissions,x > -13 & x < 3 & y > 48 & y < 61),
-                                 aes(x,y,fill=B_TTA1 + B_TAC1 + B_RGL1 + B_MHD1))  +
-    #scale_fill_distiller(palette="BuPu",trans=c("sqrt"),guide = guide_legend(title="SRR (s/ng)")) +
-    scale_fill_distiller(palette="Greys",trans=c("sqrt"),
-                         guide = guide_legend(title=expression(bar(bold(B))[1] (s/ng))),direction=2) +
-    geom_path(data=Europe,aes(x=long,y=lat,group=group)) +
-    coord_map(xlim=c(-12,2),ylim=c(49,60)) + xlab("lon (degrees)") + ylab("lat (degrees)\n") +
-    geom_point(data=Station_locs,aes(x=unlist(x),y=unlist(y)),col="black",size=4) +
-    geom_text(data=Station_locs,aes(x=unlist(x),y=unlist(y)+0.3,label=unlist(name)),col="black") +
-    theme(axis.title.y = element_text(vjust = 1))
-if(save_images)
-  ggsave("./img/SRR_01Jan.png",plot=g_SRR,width=6.7,height=6.7)
+if(save_images) {
+  g_SRR <- LinePlotTheme() + geom_tile(data=subset(Emissions,x > -13 & x < 3 & y > 48 & y < 61),
+                                   aes(x,y,fill=B_TTA1 + B_TAC1 + B_RGL1 + B_MHD1))  +
+      #scale_fill_distiller(palette="BuPu",trans=c("sqrt"),guide = guide_legend(title="SRR (s/ng)")) +
+      scale_fill_distiller(palette="Greys",trans=c("sqrt"),
+                           guide = guide_legend(title=expression(bar(bold(B))[1] (s/ng))),direction=2) +
+      geom_path(data=Europe,aes(x=long,y=lat,group=group)) +
+      coord_map(xlim=c(-12,2),ylim=c(49,60)) + xlab("lon (degrees)") + ylab("lat (degrees)\n") +
+      geom_point(data=Station_locs,aes(x=unlist(x),y=unlist(y)),col="black",size=4) +
+      geom_text(data=Station_locs,aes(x=unlist(x),y=unlist(y)+0.3,label=unlist(name)),col="black") +
+      theme(axis.title.y = element_text(vjust = 1))
+    ggsave("./img/SRR_01Jan.png",plot=g_SRR,width=6.7,height=6.7)
+}
 
-Emissions_map("z") + 
-    scale_fill_distiller(palette="Greys",trans="reverse", guide = guide_legend(title="flux (g/s)")) +
-    geom_point(data=Station_locs,aes(x=unlist(x),y=unlist(y)),size=4) +
-    geom_text(data=Station_locs,aes(x=unlist(x),y=unlist(y)+0.3,label=unlist(name)),col="black")
+# Emissions_map("z") + 
+#     scale_fill_distiller(palette="Greys",trans="reverse", guide = guide_legend(title="flux (g/s)")) +
+#     geom_point(data=Station_locs,aes(x=unlist(x),y=unlist(y)),size=4) +
+#     geom_text(data=Station_locs,aes(x=unlist(x),y=unlist(y)+0.3,label=unlist(name)),col="black")
 
 
 ## Now we do the pruning so we focus on the UK.
@@ -482,23 +483,24 @@ X1[-Highlands,2] <- 0
 p1 <- ncol(X1) # number of covariates
 n1 <- nrow(X1) # number of flux field locations
 
-# plot simulation setup
-s_obs$obs_name <- as.character(s_obs$obs_name)
-s_obs <- s_obs %>%
-  within(obs_name[grepl("MHD",obs_name)]<- "MHD") %>%
-  within(obs_name[grepl("RGL",obs_name)]<- "RGL") %>%
-  within(obs_name[grepl("TAC",obs_name)]<- "TAC") %>%
-  within(obs_name[grepl("TTA",obs_name)]<- "TTA")
-g_stat_data <- LinePlotTheme() + geom_point(data=s_obs,
-                                            aes(x=t,y=z)) +
-  facet_grid(obs_name~.) +
-  ylab("background-enhanced mol. fraction (ppb)\n") +  xlab("t (2 h steps)") +
-  theme(axis.title.y=element_text(vjust=550))
-if(save_images)
+if(save_images) {
+  # plot simulation setup
+  s_obs$obs_name <- as.character(s_obs$obs_name)
+  s_obs <- s_obs %>%
+    within(obs_name[grepl("MHD",obs_name)]<- "MHD") %>%
+    within(obs_name[grepl("RGL",obs_name)]<- "RGL") %>%
+    within(obs_name[grepl("TAC",obs_name)]<- "TAC") %>%
+    within(obs_name[grepl("TTA",obs_name)]<- "TTA")
+  g_stat_data <- LinePlotTheme() + geom_point(data=s_obs,
+                                              aes(x=t,y=z)) +
+    facet_grid(obs_name~.) +
+    ylab("background-enhanced mol. fraction (ppb)\n") +  xlab("t (2 h steps)") +
+    theme(axis.title.y=element_text(vjust=550))
+  
   ggsave(filename = "./img/Fig3_SRR_Station_data_simmed.pdf",
          arrangeGrob(g_SRR,g_stat_data,ncol=2),
          width=17,height=8)
-
+}
 #-----------------------
 # 4. MCMC algorithm
 #-----------------------
