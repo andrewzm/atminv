@@ -136,7 +136,8 @@ obs_pt <- geom_point(data=df_s1[c_idx,],
 g0 <- LinePlotTheme() + 
     geom_line(data=df_s1,aes(x=s,y=lines,linetype=linetype)) + 
     ylab("") + 
-    scale_linetype(guide=guide_legend(title=""),labels=c(expression(b(0,u[2])), expression(kappa[Y[2]][Y[1]](0,u[2])))) +     #scale_linetype_manual(guide=guide_legend(title="")) +
+    scale_linetype(guide=guide_legend(title=""),labels=c(expression(b(0,u[2])), 
+                                                         expression({kappa^2}[Y[2]][Y[1]](0,u[2])))) +     #scale_linetype_manual(guide=guide_legend(title="")) +
     xlab(expression(u[2])) + obs_pt
     
 
@@ -151,11 +152,11 @@ g02 <-LinePlotTheme() + geom_tile(data=df_s2,aes(s1,s2,fill=b)) +
     coord_fixed(xlim=c(-10,10),ylim=c(-10,10)) +
     xlab(expression(s)) + ylab(expression(u))
 g1 <- LinePlotTheme() + geom_tile(data=df_s2,aes(s1,s2,fill=skew211)) + 
-    scale_fill_gradientn(colours=bw,guide=guide_legend(title=expression(kappa[Y[2]][Y[1]][Y[1]](0,u[2],u[3])))) +
+    scale_fill_gradientn(colours=bw,guide=guide_legend(title=expression({kappa^3}[Y[2]][Y[1]][Y[1]](0,u[2],u[3])))) +
     coord_fixed(xlim=c(-10,10),ylim=c(-10,10)) +
     xlab(expression(u[2])) + ylab(expression(u[3])) + obs_pt
 g2<- LinePlotTheme() + geom_tile(data=df_s2,aes(s1,s2,fill=skew222)) + 
-    scale_fill_gradientn(colours=bw,guide=guide_legend(title=expression(kappa[Y[2]][Y[2]][Y[2]](0,s[2],s[3])))) +
+    scale_fill_gradientn(colours=bw,guide=guide_legend(title=expression({kappa^3}[Y[2]][Y[2]][Y[2]](0,s[2],s[3])))) +
     coord_fixed(xlim=c(-10,10),ylim=c(-10,10)) +
     xlab(expression(s[2])) + ylab(expression(s[3])) + obs_pt
 library(gridExtra)
