@@ -136,8 +136,10 @@ obs_pt <- geom_point(data=df_s1[c_idx,],
 g0 <- LinePlotTheme() + 
     geom_line(data=df_s1,aes(x=s,y=lines,linetype=linetype)) + 
     ylab("") + 
-    scale_linetype(guide=guide_legend(title=""),labels=c(expression(b(0,u[2])), 
-                                                         expression({kappa^2}[Y[2]][Y[1]](0,u[2])))) +     #scale_linetype_manual(guide=guide_legend(title="")) +
+    scale_linetype(guide=guide_legend(title=""),
+                   labels=c(expression(b(0,u[2])), 
+                            expression({kappa^2}[Y[2]][Y[1]](0,u[2])))) +     
+    #scale_linetype_manual(guide=guide_legend(title="")) +
     xlab(expression(u[2])) + obs_pt
     
 
