@@ -32,7 +32,7 @@ library(doMC)           # for parallel computations
 
 rm(list=ls())
 
-save_images   <- 0      # save images?
+save_images   <- 1      # save images?
 N             <- 12000  # number of MCMC samples per chain
 adapt         <- 1000   # number of adaptation samples
 burnin        <- 8000   # number of burnin samples (incl. adaptation)
@@ -1014,6 +1014,62 @@ if(save_images) {
     ggsave(violin_plot,filename = "./img/Fig5_violin_plot.png",height=12,width=12)
 }
 
+################
+## ADMIN FLUX
+################
+
+## id: 0: England
+##     1: Northern Ireland
+##     2: Scotland
+##     3: Wales
+UK_regions <- readShapeSpatial("~/Desktop/GBR/GBR_adm1.shp") %>%
+    fortify()
+
+Emissions_land$admin <- "Ireland"
+for(i in c("0.1","1.1","2.1","3.1")) {
+    this_admin <- filter(UK_regions,group==i)
+    idx <- which(   sp::point.in.polygon(Emissions_land$x,Emissions_land$y,
+                                         this_admin$long,this_admin$lat)  |
+                        sp::point.in.polygon(Emissions_land$x + dx_new/3,Emissions_land$y + dy_new/3,
+                                             this_admin$long,this_admin$lat)  |
+                        sp::point.in.polygon(Emissions_land$x - dx_new/3,Emissions_land$y + dy_new/3,
+                                             this_admin$long,this_admin$lat) |
+                        sp::point.in.polygon(Emissions_land$x + dx_new/3,Emissions_land$y - dy_new/3,
+                                             this_admin$long,this_admin$lat) |
+                        sp::point.in.polygon(Emissions_land$x - dx_new/3,Emissions_land$y - dy_new/3,
+                                             this_admin$long,this_admin$lat)  == 1)
+    Emissions_land$admin[idx] <- switch(i, 
+                                        "0.1" = "England",
+                                        "1.1" = "Northern Ireland",
+                                        "2.1" = "Scotland",
+                                        "3.1" = "Wales")
+}
+ggplot(Emissions_land) + geom_tile(aes(x=x,y=y,fill=admin))
+
+
+## Initialise data frame
+admin_flux <- data.frame(Model = NULL,samp = NULL)
+
+load(system.file("extdata",paste0("spastaMCMC/Results_Box-CoxTI1.rda"), package = "atminv"))
+All_Samps <- combine_chains(All_Samps)
+
+## For each model compute the total flux in each sample
+for(i in c("England","Northern Ireland","Scotland","Wales","Ireland")) {
+    idx <- which(Emissions_land$admin == i)
+    admin_flux <- rbind(admin_flux,
+                        data.frame(admin = i, 
+                                   samp = apply(All_Samps[[1]]$Yf_samp[idx,],2,sum)*3600*24*365/10^12))
+}
+
+## Table of aggregates
+Emissions_admin <- group_by(Emissions_land,admin) %>% 
+    summarise(flux = sum(z)*3600*24*365/10^12)
+
+g_admin <- LinePlotTheme() + geom_boxplot(data=admin_flux,aes(x=admin,y=samp)) +
+    geom_point(data=Emissions_admin,aes(x=admin,y=flux),shape=2,size=3) +
+    xlab("\n Administrative region (land only)") + 
+    ylab("Total flux (Tg/yr) \n")
+
 ###############
 ## Total flux
 ###############
@@ -1053,12 +1109,11 @@ tot_UK_Ir <- sum(Emissions_land$z*3600*24*365/10^12)
 tot_Europe <- sum(Emissions_land$z2*3600*24*365/10^12)
 
 ## Plot the bar chart of aggregates
-gg <- LinePlotTheme() + geom_boxplot(data=tot_flux,aes(x=Model,y=samp)) +
-    coord_flip() +
+g_total <- LinePlotTheme() + geom_boxplot(data=tot_flux,aes(x=Model,y=samp)) +
     geom_line(data=data.frame(y=c(tot_UK_Ir,tot_UK_Ir),x=c(0,8)),aes(x,y),linetype="dashed") +
-    ylab("Total flux (Tg/yr)")
+    ylab("Total flux (Tg/yr)\n") + xlab("\n Model")
 if(save_images)
-  ggsave(gg,file="./img/Fig6_tot_flux.pdf",height=8,width=12)
+  ggsave(arrangeGrob(g_admin,g_total,ncol=2),file="./img/Fig6_tot_flux.pdf",height=9,width=18)
 
 ### Mole-fraction
 LinePlotTheme() + geom_point(data=s_obs,aes(t,z)) + facet_grid(obs_name~.)
