@@ -32,7 +32,7 @@ library(doMC)           # for parallel computations
 
 rm(list=ls())
 
-save_images   <- 1      # save images?
+save_images   <- 0      # save images?
 N             <- 12000  # number of MCMC samples per chain
 adapt         <- 1000   # number of adaptation samples
 burnin        <- 8000   # number of burnin samples (incl. adaptation)
@@ -1018,12 +1018,13 @@ if(save_images) {
 ## ADMIN FLUX
 ################
 
+## Admin boundaries obtained from Tthe GADM database (www.gadm.org), version 2.8, November 2015. They can be used for non-commercial purposes only.  It is not allowed to redistribute these data, or use them for commercial purposes, without prior consent. See the website for more information.
+
 ## id: 0: England
 ##     1: Northern Ireland
 ##     2: Scotland
 ##     3: Wales
-UK_regions <- readShapeSpatial("~/Desktop/GBR/GBR_adm1.shp") %>%
-    fortify()
+data(UK_regions)
 
 Emissions_land$admin <- "Ireland"
 for(i in c("0.1","1.1","2.1","3.1")) {
