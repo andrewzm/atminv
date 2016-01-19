@@ -1111,7 +1111,7 @@ tot_Europe <- sum(Emissions_land$z2*3600*24*365/10^12)
 
 ## Plot the bar chart of aggregates
 g_total <- LinePlotTheme() + geom_boxplot(data=tot_flux,aes(x=Model,y=samp)) +
-    geom_line(data=data.frame(y=c(tot_UK_Ir,tot_UK_Ir),x=c(0,8)),aes(x,y),linetype="dashed") +
+    geom_point(data=data.frame(y=rep(tot_UK_Ir,7),x=1:7),aes(x,y),shape=2,size=3) +
     ylab("Total flux (Tg/yr)\n") + xlab("\n Model")
 if(save_images)
   ggsave(arrangeGrob(g_admin,g_total,ncol=2),file="./img/Fig6_tot_flux.pdf",height=9,width=18)
