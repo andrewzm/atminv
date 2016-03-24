@@ -63,3 +63,22 @@ ggplot_dual_axis <- function(lhs, rhs, axis.title.y.rhs = "rotate") {
     grid.newpage()
     return(arrangeGrob(g))
 }
+
+#' @export
+draw_world <- function (g = ggplot(), inc_border = TRUE) 
+{
+    if (!(is(g, "ggplot"))) 
+        stop("g has to be of class ggplot")
+    if (!(is.logical(inc_border))) 
+        stop("inc_border needs to be TRUE or FALSE")
+    long <- lat <- group <- NULL
+    data(world, envir = environment(), package = "atminv")
+    if (inc_border) {
+        border <- data.frame(long = c(-179.99, -179.99, 179.99, 
+                                      179.99), lat = c(-89.99, 89.99, 89.99, -89.99), group = 1e+05, 
+                             region = "border")
+        world <- plyr::rbind.fill(world, border)
+    }
+    g + geom_path(data = world, aes(x = long, y = lat, group = group), 
+                  colour = "black", size = 0.1)
+}

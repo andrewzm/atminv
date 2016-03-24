@@ -12,6 +12,7 @@
 ## in which to store the results and ~/cache/Assim for temporarily storing results.
 ##################################################################################
 
+library(plyr)
 library(dplyr)
 library(tidyr)
 library(Matrix)
@@ -24,6 +25,9 @@ library(linalg)         # https://github.com/andrewzm/linalg
 library(foreach)        # for parallel computations
 library(doRNG)          # for parallel computations
 library(doMC)           # for parallel computations
+library(slice)          # J. Rougier's homepage
+# Also requires gdata, xtable, sp and fields
+
 
 #-------------------------------------------------------------------
 # 1. Program setup
@@ -32,22 +36,22 @@ library(doMC)           # for parallel computations
 
 rm(list=ls())
 
-save_images   <- 0      # save images?
+save_images   <- 1      # save images?
 N             <- 12000  # number of MCMC samples per chain
 adapt         <- 1000   # number of adaptation samples
 burnin        <- 8000   # number of burnin samples (incl. adaptation)
 dither        <- 10     # thinning factor
 n_parallel    <- 10     # number of parallel chains
 do_inference  <- 0      # do inference or load results?
-true_inventory<- 1      # assume true inventory or wrong inventory?
-real_data     <- 0      # use real data or simulated data?
+true_inventory <- 1      # 0: Europe inventory, 1: UK inventory, 2: Australia inventory
+sim_data     <- 1      # 0: use real UK data, 1: simulated data from UK, 2: simulated data from Australia
 model <- "Gaussian.uncorrelated" # Can be one of the following:
 # Box-Cox, Lognormal, Gaussian,   Box-Cox.uncorrelated, 
 # Lognormal.uncorrelated or Gaussian.uncorrelated
 
 if(do_inference)
   print(paste0("Doing inference with Model ",model," with ", N," samples and ",n_parallel,
-             " parallel chains, true_inventory = ",true_inventory, " and real data = ",real_data))
+             " parallel chains, true_inventory = ",true_inventory, " and sim data = ",sim_data))
 
 select <- dplyr::select  # ensure select is the dplyr select
 
@@ -103,7 +107,7 @@ yx <- yx %>%
 # Note that we sum the emissions in each grid cell and average the percentage of
 # UK territory
 Emissions <- group_by(yx,breaks_x,breaks_y) %>%
-    summarise(y = mean(y),
+        summarise(y = mean(y),
               x = mean(x),
               in_land = max(in_land),
               region = region[1],
@@ -132,17 +136,22 @@ Emissions_map <- function(field,ll=-2000,ul=2000) {
 }
 print(Emissions_map("z"))
 
-
 yx_land <- subset(yx,region %in% c("UK","Ireland"))       # consider land cells
 Dist_mat <- fields::rdist(Emissions_land[,c("x","y")])    # find distance matrix
 flux_cov_fn <- function(D,scale,nu) exp(-scale*(D^nu))    # flux cov. function (Gauss scale)
 
 ## Check flux field with geoR
 library(geoR)
+Emissions_land$Highlands <-  as.numeric(Emissions_land$y > 56.4)
 geo_obj <- as.geodata(Emissions_land,coords.col = c("x","y"),data.col = "z")
-likfit(geo_obj,ini=c(0.5,0.5),fix.lambda=FALSE,fix.nugget=T) %>%
-    summary() %>% print()
+ml <- likfit(geo_obj,ini=c(0.5,0.5),fix.lambda=FALSE,fix.nugget=T,
+             trend = trend.spatial(~1 + Emissions_land$Highlands,geodata = geo_obj))
+summary(ml) %>% print()
+#xv.ml <- xvalid(geodata = geo_obj, model=ml)
 
+ml2 <- likfit(geo_obj,ini=c(0.5,0.5),fix.lambda=TRUE,fix.nugget=T,lambda = 1,
+             trend = trend.spatial(~1 + Emissions_land$Highlands,geodata = geo_obj))
+#xv.ml2 <- xvalid(geodata = geo_obj, model=ml2)
 
 #-------------------------------------------------------------------
 # 2. Data preprocessing
@@ -363,6 +372,105 @@ Emissions <- Emissions[id,]
 ## And only consider the SRRs on these grid cells
 Stations <- lapply(Stations,function(l) {  l$B <- l$B[,id]; l})
 
+## Create the "wrong" inventory from Europe
+Emissions_all$mask <- 0
+Emissions_all$mask[id + 14*63 - 15] <- 1  # Cut out England shape from France/Germany
+Emissions_land$z2 <- Emissions_all$z[Emissions_all$mask==1] # Pretend this is the inventory
+ggplot(Emissions_all) + geom_tile(aes(x=x,y=y,fill=mask)) +
+    geom_path(data=Europe,aes(x=long,y=lat,group=group))
+Emissions_map("z2")
+
+
+## Create the "wrong" inventory from Australia
+data("Emissions_Australia",package="atminv")
+Emissions_Australia$mask <- 0
+Emissions_Australia$mask[id + 28*63 + 5] <- 1  # Great results but includes some sea (makes results stronger though)
+#Emissions_Australia$mask[id + 17*63 + 12] <- 1  # OK only land but not as "Gaussian" as above
+(ggplot(Emissions_Australia) + geom_tile(aes(x=lon,y=lat,fill=mask)) ) %>% draw_world()  + xlim(c(112,156.5)) + ylim(c(-40.25,-10.75))
+Emissions_land$z3 <- Emissions_Australia$CH4flux_tot[Emissions_Australia$mask==1] # Pretend this is the inventory
+Emissions$z3 <- Emissions_land$z3
+Emissions_map("z3") + scale_fill_distiller(palette="Spectral",limits=c(0,200),name="")
+
+## Draw domains
+#gUK_inv <- (LinePlotTheme() + geom_tile(data=filter(Emissions_all,x <= max(Emissions_land$x) &
+                                             # x >= min(Emissions_land$x) &
+                                             # y >= min(Emissions_land$y) & 
+                                             # y <= max(Emissions_land$y)),
+gUK_inv <- (LinePlotTheme() + geom_tile(data=Emissions_all,aes(x=x,y=y,fill=pmin(z,2000),alpha = 0)) + 
+                geom_tile(data=Emissions_land,aes(x=x,y=y,fill=pmin(z,2000),alpha = 1)))%>%
+    draw_world() +
+    scale_fill_distiller(palette="Spectral",name="flux (g/s)\n") +
+    scale_alpha(guide = "none") +
+    xlim(min(Emissions_land$x)-3,max(Emissions_land$x)+4) +
+    ylim(min(Emissions_land$y)-4,max(Emissions_land$y)+4) + coord_fixed() + xlab("lon (deg)") + ylab("lat (deg)")
+gUK_inv2 <- Emissions_map("z") + scale_fill_distiller(palette="Greys",trans="reverse",name="flux (g/s)\n",limits=c(2000,0)) + xlab("lon (deg)\n") + ylab("lat (deg)\n")
+
+## Draw domains
+Europe_masked <- filter(Emissions_all,mask == 1)
+# gEUR_inv <- (LinePlotTheme() + geom_tile(data=filter(Emissions_all,x < max(Europe_masked$x) &
+#                                              x > min(Europe_masked$x) &
+#                                              y > min(Europe_masked$y) & 
+#                                              y < max(Europe_masked$y)),
+gEUR_inv <- (LinePlotTheme() + geom_tile(data=Emissions_all,
+                                         aes(x=x,y=y,fill=pmin(z,1500),alpha=mask))) %>%
+    draw_world() +
+    scale_fill_distiller(palette="Spectral",name="flux (g/s)\n") +
+    scale_alpha(guide = "none") +
+    xlim(min(Europe_masked$x)-3,max(Europe_masked$x)+4) +
+    ylim(min(Europe_masked$y)-4,max(Europe_masked$y)+4) + coord_fixed()+ xlab("lon (deg)") + ylab("lat (deg)")
+gEUR_inv2 <- Emissions_map("z2") + scale_fill_distiller(palette="Greys",trans="reverse",name="flux (g/s)\n",limits=c(1200,0)) + xlab("lon (deg)\n") + ylab("lat (deg)\n")
+
+
+Au_masked <- filter(Emissions_Australia,mask == 1)
+gAU_inv <- (LinePlotTheme() + #geom_tile(data=filter(Emissions_Australia,lon < max(Au_masked$lon) &
+                              #                 lon > min(Au_masked$lon) &
+                              #                 lat > min(Au_masked$lat) & 
+                              #                 lat < max(Au_masked$lat)),
+                            geom_tile(data=Emissions_Australia,
+                               aes(x=lon,y=lat,fill=pmin(CH4flux_tot,120),alpha=mask))) %>%
+                    draw_world() +
+                    scale_fill_distiller(palette="Spectral",name="flux (g/s)\n") +
+                    scale_alpha(guide = "none") +
+                    xlim(min(Au_masked$lon)-3,max(Au_masked$lon)+4) +
+                    ylim(min(Au_masked$lat)-4,max(Au_masked$lat)+4) + coord_fixed() + xlab("lon (deg)") + ylab("lat (deg)")
+gAU_inv2 <- Emissions_map("z3") + scale_fill_distiller(palette="Greys",trans="reverse",name="flux (g/s)\n",limits=c(120,0)) + xlab("lon (deg)\n") + ylab("lat (deg)\n")
+
+
+if(save_images) {
+    gALL_inv <- arrangeGrob(gUK_inv2,gEUR_inv2,gAU_inv2,nrow=1)
+    ggsave(filename = "./img/Fig2_all_inventories.pdf",
+           gALL_inv,
+           width=17,height=5.5)
+}
+    
+    
+png(filename="../SpatStat_paper/Reviews/hists.png",width = 4000,height=1600,res = 300)
+par(mfrow=c(1,2))
+hist(Emissions$z,xlab = "flux (g/s)",main="")
+hist(Emissions$z3,xlab = "flux (g/s)",main="")
+dev.off()
+
+
+## Check flux field with geoR
+library(geoR)
+geo_obj <- as.geodata(Emissions_land,coords.col = c("x","y"),data.col = "z2")
+likfit(geo_obj,ini=c(0.5,0.5),fix.lambda=FALSE,fix.nugget=T) %>%
+    summary() %>% print()
+
+if(true_inventory == 1) {
+    Zinv <- Emissions_land$z
+} else if (true_inventory == 0) {
+    Zinv <- Emissions_land$z2
+} else if (true_inventory == 2) {
+    Zinv <- Emissions_land$z3
+} 
+
+if(true_inventory == 2 & sim_data == 1) {   # If using Australian inventory for UK sim amplify by 10
+    Zinv <- mean(Emissions_land$z)/mean(Zinv) * Zinv
+    }
+
+
+
 #-------------------------------------------------------------------
 # 3. Model + matrix construction + simulate observations
 #------------------------------------------------------------------
@@ -398,12 +506,22 @@ Q_norm_zeta_fn <- function(s,t,theta_t,theta_s) {
   Q_norm_zeta <- crossprod(kronecker(chol_Q_zeta_t, chol_Q_zeta_s))
 }
 
-if(!real_data) {
+if(sim_data > 0) {
 
     theta_t_true <- 0.9     # temporal correlation parameter ('a' in text)
     theta_s_true <- 2.5       # spatial range parameter ('d' in text)
-    sigma_zeta_true <- 10
-
+    sigma_obs <- 1
+    
+    if(sim_data == 1) {
+        message("Simulating from the UK")
+        real_emissions <- Emissions$z    
+        sigma_zeta_true <- 10
+    } else if (sim_data == 2){
+        message("Simulating from Australia")
+        real_emissions <- Emissions$z3
+        sigma_zeta_true <- 0.5
+    }
+    
     Q_zeta_true <- sigma_zeta_true^(-2) * Q_norm_zeta_fn(obs_locs,
                                                          t_axis,
                                                          theta_t_true,
@@ -416,17 +534,17 @@ if(!real_data) {
                                                      function(l) l$Obs_obj@df))
     idx <- which(s_obs$z > 0 & !is.na(s_obs$z))
 
-    message("Setting measurement error to 1")
     Stations <- lapply(Stations,
                        function(x) {
                            x$Obs_obj["z"] <- as.numeric(x$C[which(!(colSums(x$C) == 0)),] %*%
-                                                            x$B %*% Emissions$z)
+                                                            x$B %*% real_emissions)
                            x})
-
+   
     ## Now create observations
+    message(paste0("Setting measurement error to ",sigma_obs))
     s_obs <- Reduce("rbind",lapply(Stations,function(l) l$Obs_obj@df)) %>%
         arrange(t) %>%
-        mutate(std=1)
+        mutate(std=sigma_obs)
     s_obs$std[which(s_obs$std == -999)] <- mean(subset(s_obs,std>0)$std)
 
     s_obs <- mutate(s_obs,
@@ -460,26 +578,19 @@ Qobs <- Diagonal(x=1/s_obs$std^2)
 Sobs <- solve(Qobs)
 Z <- s_obs$z
 
-## Create the "wrong" inventory from Europe
-Emissions_all$mask <- 0
-Emissions_all$mask[id + 14*63 - 15] <- 1  # Cut out England shape from France/Germany
-Emissions_land$z2 <- Emissions_all$z[Emissions_all$mask==1] # Pretend this is the inventory
-ggplot(Emissions_all) + geom_tile(aes(x=x,y=y,fill=mask)) +
-  geom_path(data=Europe,aes(x=long,y=lat,group=group))
-Emissions_map("z2")
-if(true_inventory) {
-  Zinv <- Emissions_land$z
-} else {
-  Zinv <- Emissions_land$z2
-}
 
 ## Create Covariate matrix X
 #X1 <- matrix(1,nrow(Dist_mat),1)
-Highlands <- which(Emissions_land$y > 56.4)
-X1 <- matrix(1,nrow(Dist_mat),2)
-X1[Highlands,1] <- 0
-X1[-Highlands,2] <- 0
+if(sim_data == 1) {
+    Highlands <- which(Emissions_land$y > 56.4)
+    X1 <- matrix(1,nrow(Dist_mat),2)
+    X1[Highlands,1] <- 0
+    X1[-Highlands,2] <- 0
+} else if (sim_data == 2) {
+    X1 <- matrix(rep(1,nrow(Dist_mat)))
+}
 
+    
 p1 <- ncol(X1) # number of covariates
 n1 <- nrow(X1) # number of flux field locations
 
@@ -542,11 +653,16 @@ if(!grepl("uncorrelated",model)) {
     if(!is.na(lambda_fix)) theta_f_samp[1,] <- lambda_fix
 }
 
+
 ## HMC parameters
 M <- diag(rep(1/100^2,n1))                      # scaling matrix
 L <- 25L                                        # number of steps for each sample
 Yf_samp <- matrix(0,nrow(M),N)                  # where to store the samples
-Yf_samp[,1] <- curr_Yf_samp <- pmax(Emissions$z + 30*rnorm(n1),10)  # first 'sample'
+if(sim_data == 1 | sim_data == 0) {
+    Yf_samp[,1] <- curr_Yf_samp <- pmax(Emissions$z + 30*rnorm(n1),10)  # first 'sample'
+} else {
+    Yf_samp[,1] <- curr_Yf_samp <- pmax(Emissions$z3 + 30*rnorm(n1),10)  # first 'sample'
+}
 Yf_accept <- rep(0,N)                           # initialise
 
 ## Mole-fraction field parameters
@@ -554,7 +670,7 @@ Yf_accept <- rep(0,N)                           # initialise
 theta_m_sampler <- slice::slice(3)
 theta_m_samp <- matrix(0,3,N)
 theta_m_samp[,1] <- c(log(2000),0.7,log(2.5))
-if(!real_data)
+if( sim_data > 0)
   {
      Q_zeta <- Q_zeta_true
 } else  {
@@ -564,14 +680,22 @@ if(!real_data)
                                                         exp(theta_m_samp[3,1]))
 }
 
+## Remove the Stations file to save space (it's not needed anymore)
+rm(Stations)
+gc()
+
 if(do_inference) {
   print("Starting inference")
-
+  ptm <- proc.time()  # Start the timer
+  set.seed(1)
+  
   ## Initialise parallel backend for distributing the MCMC chains (Linux only)
   if(n_parallel > 1) registerDoMC(n_parallel)
 
   # For each parallel MCMC chain
-  All_Samps <- foreach(j = 1:n_parallel,.export='Q_norm_zeta_fn') %dorng% {
+  All_Samps <- foreach(j = 1:n_parallel,
+                       .export='Q_norm_zeta_fn',
+                       .options.RNG=1) %dorng% {
 
         for (i in 2:N) {  # for each sample
 
@@ -596,7 +720,7 @@ if(do_inference) {
                 theta_f_samp[1:nf,i] <- theta_f_sampler(theta_f_samp[1:nf,(i-1)],  # previous sample
                                                         log_f_theta_f,             # log density
                                                         learn = (i <= adapt),      # learning?
-                                                        Z=cbind(Zinv,Yf_samps[,i-1]), # data + inventory
+                                                        Z=cbind(Zinv,Yf_samp[,i-1]), # data + inventory
                                                         D=Dist_mat,                # distance matrix
                                                         flux_cov_fn = flux_cov_fn, # flux cov. function
                                                         X=X1,                      # covariates
@@ -619,7 +743,7 @@ if(do_inference) {
                                           X = X1,         # covariates
                                           Q_zeta = Q_zeta,   # discrepancy cov matrix
                                           S_f_trans = S_f_trans/S_f_trans[1,1],  # covariance of log-flux field
-                                          lambda=current_lambda,      # indices to consider (all)
+                                          lambda=current_lambda,      
                                           lambda_fix = lambda_fix)    # lambda value
                                           
             ## Sample the flux field
@@ -641,7 +765,7 @@ if(do_inference) {
                 cat(paste0("Sample: ",i," Acceptance rate: ",
                            (length(unique(Yf_samp[1,]))-1)/i,"\n"),
                 file=paste0("./tempresults/",model,
-                            "_Chain_",j,"TI",true_inventory,"RD",real_data),
+                            "_Chain_",j,"TI",true_inventory,"RD",sim_data),
                 append=TRUE)
 
             if(!all(curr_Yf_samp == Yf_samp[,i-1])) Yf_accept[i] <- 1
@@ -696,7 +820,7 @@ if(do_inference) {
         sub_samp <- seq(burnin,N,by=dither) 
         
         ## Save data
-        if(!real_data) {
+        if(sim_data > 0) {
           return(list(model = model,
              i = i,
              burnin = burnin,
@@ -710,7 +834,7 @@ if(do_inference) {
              theta_f_samp = theta_f_samp[,sub_samp],
              true_inventory = true_inventory))
         } else {
-          if(real_data)
+          if(sim_data == 0)
             return(list(model = model,
                  i = i,
                  burnin = burnin,
@@ -722,23 +846,32 @@ if(do_inference) {
                  true_inventory = true_inventory))
         }
 
-    }
-    if(!real_data)
-      save(All_Samps,file = paste0("./tempresults/Results_",model,"TI",true_inventory,".rda"))
-    else
-      save(All_Samps,file = paste0("./tempresults/Results_",model,"TI",true_inventory,"_RD.rda"))
+  }
+  
+  save(All_Samps,file = paste0("./tempresults/Results_",model,"_TI",true_inventory,"_simdata",sim_data,".rda"))
+  tot_time <- proc.time() - ptm
+  cat(names(tot_time),"\n",tot_time,
+      file=paste0("./tempresults/",model,
+                  "_TIMING_","_TI",true_inventory,"_simdata",sim_data),
+      append=TRUE)
+  
 }
 
 #-------------------------------------------------------------------
 # 5. Analyse results
 #------------------------------------------------------------------
+if(do_inference == 1) stop("Finished inference")
+
+analyse_sim_data <- sim_data
 
 ## See if there are any problematic chains (Only to be run in DEV mode)
 if(0) {
-  fnames <- dir("../atminv/inst/extdata/spastaMCMC/")[grepl("Chain",dir("../atminv/inst/extdata/spastaMCMC/"))]
+  #dirname <- "../atminv/inst/extdata/spastaMCMC/"
+  dirname <- "./tempresults/"
+  fnames <- dir(dirname)[grepl("Chain",dir(dirname))]
   for (i in 1:length(fnames)) {
     #file_in <- file(fnames[i],"r")
-    file_in <- file(paste0("../atminv/inst/extdata/spastaMCMC/",fnames[i]),"r")
+    file_in <- file(paste0(dirname,fnames[i]),"r")
     x <- readLines(file_in)
     temp <- gregexpr("[0-9.]+", x[length(x)])
     acc_ratio <- min(as.numeric(unique(unlist(regmatches(x[length(x)], temp)))))
@@ -774,12 +907,12 @@ combine_chains <- function(l) {
 ###########################
 
 # Load model 1
-#load(paste0("Results_",models[1],"TI1.rda"))
-load(system.file("extdata",paste0("spastaMCMC/Results_",models[1],"TI1.rda"), package = "atminv"))
+#load(paste0("tempresults/Results_",models[1],"_TI",analyse_sim_data,"_simdata",analyse_sim_data,".rda"))
+load(system.file("extdata", paste0("spastaMCMC/Results_",models[1],"_TI",analyse_sim_data,"_simdata",analyse_sim_data,".rda"), package = "atminv"))
 
 # Posterior median of emissions for Model 1
 Emissions_land$post <- apply(All_Samps[[1]]$Yf_samp,1,median)
-if(save_images)
+if(save_images & analyse_sim_data == 1)
   ggsave(Emissions_map("post"),filename = "./img/median_flux_post.png")
 
 # Number of samples
@@ -790,8 +923,8 @@ df_par <- data.frame(n = 1:Nsamp)
 
 # For each model add six columns corresponding the the sampled parameters (on original scale)
 for(i in 1:6) {
-    #load(paste0("Results_",models[i],"TI1.rda"))
-    load(system.file("extdata",paste0("spastaMCMC/Results_",models[i],"TI1.rda"), package = "atminv"))
+    #load(paste0("tempresults/Results_",models[i],"_TI",analyse_sim_data,"_simdata",analyse_sim_data,".rda"))
+    load(system.file("extdata",paste0("spastaMCMC/Results_",models[i],"_TI",analyse_sim_data,"_simdata",analyse_sim_data,".rda"), package = "atminv"))
     All_Samps <- combine_chains(All_Samps)
     df_par[paste0(model_names[i],"_thetam1")] <- 1/(exp(All_Samps[[1]]$theta_m_samp[1,]))
     df_par[paste0(model_names[i],"_thetam2")] <- All_Samps[[1]]$theta_m_samp[2,]
@@ -806,7 +939,6 @@ for(i in 1:6) {
     if(grepl("Gaussian",models[i]) | grepl("Lognormal",models[i])) {
         df_par[paste0(model_names[i],"_thetaf3")] <- NULL
     }
-
 }
 
 ## Now put the data frame into long form
@@ -816,6 +948,8 @@ df_par2 <- gather(df_par,par,sample,-n) %>%
 
 ## Visalise some of the chains to make sure they make sense
 ggplot(subset(df_par2, Model=="Model 5")) + geom_point(aes(x=n,y=sample)) + facet_grid(par~.,scales="free")
+#ggplot(subset(df_par2, process=="Mole-fraction")) + geom_point(aes(x=n,y=sample)) + facet_grid(Model~par,scales="free")
+
 
 ## Labeller function for labelling the facets
 my.label_bquote <- function(variable, value) {
@@ -853,18 +987,26 @@ g2 <- LinePlotTheme() + geom_boxplot(data=subset(df_par2,process=="Mole-fraction
 
 ## Save the image
 g_all <- arrangeGrob(g1,g2,ncol=2)
-if(save_images)
-  ggsave(filename = "./img/Fig4_theta_post.pdf",
+if(save_images & analyse_sim_data == 1)
+  ggsave(filename = "./img/Fig6_theta_post.pdf",
          arrangeGrob(g1,g2,ncol=2),
          width = 17,height=8)
 
 
 ## Find the posterior mean of lambda in Model 1
-#load(paste0("Results_",models[1],"TI1.rda"))
-load(system.file("extdata",paste0("spastaMCMC/Results_",models[1],"TI1.rda"), package = "atminv"))
+#load(paste0("tempresults/Results_",models[1],"_TI",analyse_sim_data,"_simdata",analyse_sim_data,".rda"))
+load(system.file("extdata",paste0("spastaMCMC/Results_",models[1],"_TI",analyse_sim_data,"_simdata",analyse_sim_data,".rda"), package = "atminv"))
 All_Samps <- combine_chains(All_Samps)
-mean(All_Samps[[1]]$theta_f_samp[3,])
+print(paste0("Mean posterior lambda for Box-Cox with true inventory is ",mean(All_Samps[[1]]$theta_f_samp[3,])))
 
+## Find the posterior mean of lambda in Model 1**
+if(analyse_sim_data == 1) {
+    #load(paste0("tempresults/Results_",models[1],"_TI",2,"_simdata",1,".rda"))
+    load(system.file("extdata",paste0("spastaMCMC/Results_",models[1],"_TI",2,"_simdata",1,".rda"), package = "atminv"))
+    All_Samps <- combine_chains(All_Samps)
+    print(paste0("Mean posterior lambda for Box-Cox with Australian inventory is ",mean(All_Samps[[1]]$theta_f_samp[3,])))
+}
+    
 ###########################
 ### Flux field posterior
 ###########################
@@ -879,15 +1021,16 @@ MAE_flux <- crps_flux <- data.frame(Model = 1:6,LQ = 0, Median = 0, UQ =0)
 error_flux <- data.frame(Model = 1:6, MAPE = 0, RMSPE = 0,MCRPS=0)
 
 ## for both the true inventory and wrong inventory models
-for(TI in c(1,0))
+for(TI in c(1,0,2))
   for(i in 1:6) {
-      #if(file.exists(paste0("Results_",models[i],"TI",TI,".rda"))) {
-      if(file.exists(system.file("extdata",paste0("spastaMCMC/Results_",models[i],"TI",TI,".rda"), 
-                                 package = "atminv"))) {
-          #load(paste0("Results_",models[i],"TI",TI,".rda"))
+      if(file.exists(paste0("tempresults/Results_",models[i],"_TI",TI,"_simdata",analyse_sim_data,".rda"))) {
+      #if(file.exists(system.file("extdata",paste0("spastaMCMC/Results_",models[i],"TI",TI,".rda"), 
+      #                           package = "atminv"))) {
+          
           
           # load file 
-          load(system.file("extdata",paste0("spastaMCMC/Results_",models[i],"TI",TI,".rda"), package = "atminv"))
+          #load(paste0("tempresults/Results_",models[i],"_TI",TI,"_simdata",analyse_sim_data,".rda"))
+          load(system.file("extdata",paste0("spastaMCMC/Results_",models[i],"_TI",TI,"_simdata",analyse_sim_data,".rda"), package = "atminv"))
           
           # combine chains
           All_Samps <- combine_chains(All_Samps)
@@ -896,28 +1039,40 @@ for(TI in c(1,0))
           Yf_samp <- All_Samps[[1]]$Yf_samp
           
           # model number (accounting for false inventory model, Model 7)
-          ii <- i + (!TI)*6
+          ii <- i
+          if(analyse_sim_data == 1) {
+              true_emissions = Emissions_land$z
+              if(TI == 0) {
+                  ii <- i + 6    
+              } else if(TI == 2) {
+                  ii <- i + 7    
+              }
+          }
+          if(analyse_sim_data == 2) {
+              true_emissions = Emissions_land$z3
+          }
+          
           
           # initialise crps, cdf and error fields
           Emissions_land[paste0("crps",ii)] <- 0
           Emissions_land[paste0("cdf", ii)] <- 0
-          Emissions_land[paste0("error",ii)] <- apply(Yf_samp,1,mean) - Emissions_land$z
+          Emissions_land[paste0("error",ii)] <- apply(Yf_samp,1,mean) - true_emissions
           
           # for each flux field location
           for (j in 1:nrow(Emissions_land)){
             
               # find the ECDF at this location
-              Emissions_land[paste0("cdf",ii)][j,] <- ecdf(Yf_samp[j,1000:(i-1)])(Emissions_land$z[j])
+              Emissions_land[paste0("cdf",ii)][j,] <- ecdf(Yf_samp[j,1000:(i-1)])(true_emissions[j])
               # compute the CRPS
               Emissions_land[paste0("crps",ii)][j,] <- sum((ecdf(Yf_samp[j,])(0:5000) -
-                                                               as.numeric((0:5000)>Emissions_land$z[j]))^2) * 1 #unit grid width
+                                                               as.numeric((0:5000)>true_emissions[j]))^2) * 1 #unit grid width
           }
           ## add CRPS to CRPS data frame
           crps_flux[ii,] <- c(ii, quantile(unlist(Emissions_land[paste0("crps",i)]),
                                          c(0.25,0.5,0.75)))
           
           ## add MAE to MAE data frame
-          MAE_flux[ii*6,] <- c(i + (!TI)*6, quantile(mean(abs(unlist(Emissions_land[paste0("error",i)]))),
+          MAE_flux[ii*6,] <- c(ii, quantile(mean(abs(unlist(Emissions_land[paste0("error",i)]))),
                                                      c(0.25,0.5,0.75)))
           
           ## add errors to error data frame
@@ -939,7 +1094,7 @@ g1 <- Emissions_map("wtf") + scale_fill_distiller(breaks=c(0,1), guide = guide_l
 Emissions_land$wtf <- (abs(Emissions_land$error2)  < abs(Emissions_land$error1))
 g2 <- Emissions_map("wtf")+ scale_fill_distiller(breaks=c(0,1), guide = guide_legend(title=""))  +
     ggtitle("Model 2 vs. Model 1")
-if(save_images) {
+if(save_images & analyse_sim_data == 1) {
   ggsave(g1,filename = "./img/error_map1.png",width = 8,height=10)
   ggsave(g2,filename = "./img/error_map2.png",width = 8,height=10)
 
@@ -965,53 +1120,55 @@ plot(Emissions_land$error1 - Emissions_land$error3,
 dev.off()
 
 ## VIOLIN PLOT
-## Load Box-Cox results
-#load(paste0("Results_",models[1],"TI1.rda"))
-load(system.file("extdata",paste0("spastaMCMC/Results_",models[1],"TI1.rda"), package = "atminv"))
-All_Samps <- combine_chains(All_Samps)
-
-## Extract flux field parameters
-Yf_samp <- All_Samps[[1]]$Yf_samp
-
-## Arrange samples into a long data frame
-Q <- as.data.frame(t(Yf_samp)) %>%
-    tidyr::gather(t,z) %>%
-    separate(t, into=c("V","s"),sep="V") %>%
-    select(-V) %>%
-    mutate(x = Emissions$x[as.numeric(s)],
-           y = Emissions$y[as.numeric(s)]) %>%
-    select(-s)
-
-## Fuse Q above with the Emissions data frame (after replacing "z" with "NAEI")
-Q2 <- left_join(Q,select(mutate(Emissions,NAEI=z),
-                         x,y,NAEI,region,subregion)) %>%
-        group_by(x,y) %>%
-        mutate(med_z = median(z)) %>%
-        as.data.frame()
-
-## facet labeller
-dec_labeller <- function(variable, value) {
-    lapply(as.numeric(value),function(x) round(x,1))
-}
-
-## Plot the violin plot
-if(save_images) {
-    violin_plot <- ggplot(mutate(Q2,y=-y)) +
-        geom_rect(data = mutate(Emissions_land,y=-y),
-                  aes(xmin = 0.5,xmax = 1.5,
-                  ymin = 0,ymax = 3000,fill = z)) +
-        geom_violin(data=mutate(Q2,y=-y),aes(x=1,y=z,fill=med_z)) +
-        geom_point(aes(x=1,y=NAEI),col="black",shape=4) +
-        facet_grid(y~x,labeller = dec_labeller) +
-        scale_fill_distiller(palette="Spectral",
-                             guide = guide_legend(title="flux (g/s)"))  +
-        ylim(0,3000) + scale_x_continuous(breaks=NULL) + xlab("") + ylab("flux g/s") +
-        theme(panel.background = element_rect(fill='white', colour='grey'),
-              panel.grid=element_blank(),axis.ticks=element_blank(),
-              panel.grid.major=element_blank(),panel.grid.minor=element_blank(),axis.text.x=element_blank())
-
-
-    ggsave(violin_plot,filename = "./img/Fig5_violin_plot.png",height=12,width=12)
+if(analyse_sim_data == 1) {
+    ## Load Box-Cox results
+    #load(paste0("tempresults/Results_",models[1],"_TI",analyse_sim_data,"_simdata",analyse_sim_data,".rda"))
+    load(system.file("extdata",paste0("spastaMCMC/Results_",models[1],"_TI",analyse_sim_data,"_simdata",analyse_sim_data,".rda"), package = "atminv"))
+    All_Samps <- combine_chains(All_Samps)
+    
+    ## Extract flux field parameters
+    Yf_samp <- All_Samps[[1]]$Yf_samp
+    
+    ## Arrange samples into a long data frame
+    Q <- as.data.frame(t(Yf_samp)) %>%
+        tidyr::gather(t,z) %>%
+        separate(t, into=c("V","s"),sep="V") %>%
+        select(-V) %>%
+        mutate(x = Emissions$x[as.numeric(s)],
+               y = Emissions$y[as.numeric(s)]) %>%
+        select(-s)
+    
+    ## Fuse Q above with the Emissions data frame (after replacing "z" with "NAEI")
+    Q2 <- left_join(Q,select(mutate(Emissions,NAEI=z),
+                             x,y,NAEI,region,subregion)) %>%
+            group_by(x,y) %>%
+            mutate(med_z = median(z)) %>%
+            as.data.frame()
+    
+    ## facet labeller
+    dec_labeller <- function(variable, value) {
+        lapply(as.numeric(value),function(x) round(x,1))
+    }
+    
+    ## Plot the violin plot
+    if(save_images) {
+        violin_plot <- ggplot(mutate(Q2,y=-y)) +
+            geom_rect(data = mutate(Emissions_land,y=-y),
+                      aes(xmin = 0.5,xmax = 1.5,
+                      ymin = 0,ymax = 3000,fill = z)) +
+            geom_violin(data=mutate(Q2,y=-y),aes(x=1,y=z,fill=med_z)) +
+            geom_point(aes(x=1,y=NAEI),col="black",shape=4) +
+            facet_grid(y~x,labeller = dec_labeller) +
+            scale_fill_distiller(palette="Spectral",
+                                 guide = guide_legend(title="flux (g/s)"))  +
+            ylim(0,3000) + scale_x_continuous(breaks=NULL) + xlab("") + ylab("flux g/s") +
+            theme(panel.background = element_rect(fill='white', colour='grey'),
+                  panel.grid=element_blank(),axis.ticks=element_blank(),
+                  panel.grid.major=element_blank(),panel.grid.minor=element_blank(),axis.text.x=element_blank())
+    
+    
+        ggsave(violin_plot,filename = "./img/Fig4_violin_plot.png",height=12,width=12)
+    }
 }
 
 ################
@@ -1025,99 +1182,109 @@ if(save_images) {
 ##     2: Scotland
 ##     3: Wales
 data(UK_regions)
+if(analyse_sim_data == 1) {
 
-Emissions_land$admin <- "Ireland"
-for(i in c("0.1","1.1","2.1","3.1")) {
-    this_admin <- filter(UK_regions,group==i)
-    idx <- which(   sp::point.in.polygon(Emissions_land$x,Emissions_land$y,
-                                         this_admin$long,this_admin$lat)  |
-                        sp::point.in.polygon(Emissions_land$x + dx_new/3,Emissions_land$y + dy_new/3,
+    Emissions_land$admin <- "Ireland"
+    for(i in c("0.1","1.1","2.1","3.1")) {
+        this_admin <- filter(UK_regions,group==i)
+        idx_country <- which(   sp::point.in.polygon(Emissions_land$x,Emissions_land$y,
                                              this_admin$long,this_admin$lat)  |
-                        sp::point.in.polygon(Emissions_land$x - dx_new/3,Emissions_land$y + dy_new/3,
-                                             this_admin$long,this_admin$lat) |
-                        sp::point.in.polygon(Emissions_land$x + dx_new/3,Emissions_land$y - dy_new/3,
-                                             this_admin$long,this_admin$lat) |
-                        sp::point.in.polygon(Emissions_land$x - dx_new/3,Emissions_land$y - dy_new/3,
-                                             this_admin$long,this_admin$lat)  == 1)
-    Emissions_land$admin[idx] <- switch(i, 
-                                        "0.1" = "England",
-                                        "1.1" = "Northern Ireland",
-                                        "2.1" = "Scotland",
-                                        "3.1" = "Wales")
-}
-ggplot(Emissions_land) + geom_tile(aes(x=x,y=y,fill=admin))
-
-
-## Initialise data frame
-admin_flux <- data.frame(Model = NULL,samp = NULL)
-
-load(system.file("extdata",paste0("spastaMCMC/Results_Box-CoxTI1.rda"), package = "atminv"))
-All_Samps <- combine_chains(All_Samps)
-
-## For each model compute the total flux in each sample
-for(i in c("England","Northern Ireland","Scotland","Wales","Ireland")) {
-    idx <- which(Emissions_land$admin == i)
-    admin_flux <- rbind(admin_flux,
-                        data.frame(admin = i, 
-                                   samp = apply(All_Samps[[1]]$Yf_samp[idx,],2,sum)*3600*24*365/10^12))
-}
-
-## Table of aggregates
-Emissions_admin <- group_by(Emissions_land,admin) %>% 
-    summarise(flux = sum(z)*3600*24*365/10^12)
-
-g_admin <- LinePlotTheme() + geom_boxplot(data=admin_flux,aes(x=admin,y=samp)) +
-    geom_point(data=Emissions_admin,aes(x=admin,y=flux),shape=2,size=3) +
-    xlab("\n Administrative region (land only)") + 
-    ylab("Total flux (Tg/yr) \n")
-
-###############
-## Total flux
-###############
-
-## Initialise data frame
-tot_flux <- data.frame(Model = NULL,samp = NULL)
-
-## For each model compute the total flux in each sample
-for(j in 1:6) {
-    #load(paste0("Results_",models[j],"TI1.rda"))
-    load(system.file("extdata",paste0("spastaMCMC/Results_",models[j],"TI1.rda"), package = "atminv"))
+                            sp::point.in.polygon(Emissions_land$x + dx_new/3,Emissions_land$y + dy_new/3,
+                                                 this_admin$long,this_admin$lat)  |
+                            sp::point.in.polygon(Emissions_land$x - dx_new/3,Emissions_land$y + dy_new/3,
+                                                 this_admin$long,this_admin$lat) |
+                            sp::point.in.polygon(Emissions_land$x + dx_new/3,Emissions_land$y - dy_new/3,
+                                                 this_admin$long,this_admin$lat) |
+                            sp::point.in.polygon(Emissions_land$x - dx_new/3,Emissions_land$y - dy_new/3,
+                                                 this_admin$long,this_admin$lat)  == 1)
+        Emissions_land$admin[idx_country] <- switch(i, 
+                                            "0.1" = "England",
+                                            "1.1" = "Northern Ireland",
+                                            "2.1" = "Scotland",
+                                            "3.1" = "Wales")
+    }
+    ggplot(Emissions_land) + geom_tile(aes(x=x,y=y,fill=admin))
+    
+    
+    ## Initialise data frame
+    admin_flux <- data.frame(Model = NULL,samp = NULL)
+    
+    #load(paste0("tempresults/Results_Box-Cox_TI",analyse_sim_data,"_simdata",analyse_sim_data,".rda"))
+    load(system.file("extdata",paste0("spastaMCMC/Results_Box-Cox_TI",analyse_sim_data,"_simdata",analyse_sim_data,".rda"), package = "atminv"))
+    All_Samps <- combine_chains(All_Samps)
+    
+    ## For each model compute the total flux in each sample
+    for(i in c("England","Northern Ireland","Scotland","Wales","Ireland")) {
+        idx_country <- which(Emissions_land$admin == i)
+        admin_flux <- rbind(admin_flux,
+                            data.frame(admin = i, 
+                                       samp = apply(All_Samps[[1]]$Yf_samp[idx_country,],2,sum)*3600*24*365/10^12))
+    }
+    
+    ## Table of aggregates
+    Emissions_admin <- group_by(Emissions_land,admin) %>% 
+        summarise(flux = sum(z)*3600*24*365/10^12)
+    
+    g_admin <- LinePlotTheme() + geom_boxplot(data=admin_flux,aes(x=admin,y=samp)) +
+        geom_point(data=Emissions_admin,aes(x=admin,y=flux),shape=2,size=3) +
+        xlab("\n Administrative region (land only)") + 
+        ylab("Total flux (Tg/yr) \n")
+    
+    ###############
+    ## Total flux
+    ###############
+    
+    ## Initialise data frame
+    tot_flux <- data.frame(Model = NULL,samp = NULL)
+    
+    ## For each model compute the total flux in each sample
+    for(j in 1:6) {
+        #load(paste0("tempresults/Results_",models[j],"_TI",analyse_sim_data,"_simdata",analyse_sim_data,".rda"))
+        load(system.file("extdata",paste0("spastaMCMC/Results_",models[j],"_TI",analyse_sim_data,"_simdata",analyse_sim_data,".rda"), package = "atminv"))
+        All_Samps <- combine_chains(All_Samps)
+        tot_flux <- rbind(tot_flux,
+                          data.frame(Model = paste0("Model ",j), 
+                                     samp = apply(All_Samps[[1]]$Yf_samp,2,sum)*3600*24*365/10^12))
+    }
+    
+    ## Add on Model 1* (Model 7 in this program)
+    #load(paste0("tempresults/Results_",models[1],"_TI0_simdata",analyse_sim_data,".rda"))
+    load(system.file("extdata",paste0("spastaMCMC/Results_",models[1],"_TI0_simdata",analyse_sim_data,".rda"), package = "atminv"))
     All_Samps <- combine_chains(All_Samps)
     tot_flux <- rbind(tot_flux,
-                      data.frame(Model = paste0("Model ",j), 
+                      data.frame(Model = "Model 1*", 
                                  samp = apply(All_Samps[[1]]$Yf_samp,2,sum)*3600*24*365/10^12))
+    
+    ## Add on Model 1** (Model 8 in this program)
+    #load(paste0("tempresults/Results_",models[1],"_TI2_simdata",analyse_sim_data,".rda"))
+    load(system.file("extdata",paste0("spastaMCMC/Results_",models[1],"_TI2_simdata",analyse_sim_data,".rda"), package = "atminv"))
+    All_Samps <- combine_chains(All_Samps)
+    tot_flux <- rbind(tot_flux,
+                      data.frame(Model = "Model 1**", 
+                                 samp = apply(All_Samps[[1]]$Yf_samp,2,sum)*3600*24*365/10^12))
+    ## Table of aggregates
+    group_by(tot_flux,Model) %>%
+        summarise(mean = mean(samp),
+                  lq = quantile(samp,0.25),
+                  uq = quantile(samp,0.75),
+                  s2 = mean(samp) - 2*sd(samp))
+    
+    ## Total flux in UK + Ireland in the correct inventory
+    tot_UK_Ir <- sum(Emissions_land$z*3600*24*365/10^12)
+    
+    ## Total flux in the wrong (Europe) inventory
+    tot_Europe <- sum(Emissions_land$z2*3600*24*365/10^12)
+    
+    ## Plot the bar chart of aggregates
+    g_total <- LinePlotTheme() + geom_boxplot(data=tot_flux,aes(x=Model,y=samp)) +
+        geom_point(data=data.frame(y=rep(tot_UK_Ir,8),x=1:8),aes(x,y),shape=2,size=3) +
+        ylab("Total flux (Tg/yr)\n") + xlab("\n Model")
+    if(save_images)
+      ggsave(arrangeGrob(g_admin,g_total,ncol=2),file="./img/Fig5_tot_flux.pdf",height=9,width=18)
+    
+    ### Mole-fraction
+    LinePlotTheme() + geom_point(data=s_obs,aes(t,z)) + facet_grid(obs_name~.)
 }
-
-## Add on Model 1* (Model 7 in this program)
-#load(paste0("Results_",models[1],"TI0.rda"))
-load(system.file("extdata",paste0("spastaMCMC/Results_",models[1],"TI0.rda"), package = "atminv"))
-All_Samps <- combine_chains(All_Samps)
-tot_flux <- rbind(tot_flux,
-                  data.frame(Model = "Model 1*", 
-                             samp = apply(All_Samps[[1]]$Yf_samp,2,sum)*3600*24*365/10^12))
-
-## Table of aggregates
-group_by(tot_flux,Model) %>%
-    summarise(mean = mean(samp),
-              lq = quantile(samp,0.25),
-              uq = quantile(samp,0.75),
-              s2 = mean(samp) - 2*sd(samp))
-
-## Total flux in UK + Ireland in the correct inventory
-tot_UK_Ir <- sum(Emissions_land$z*3600*24*365/10^12)
-
-## Total flux in the wrong (Europe) inventory
-tot_Europe <- sum(Emissions_land$z2*3600*24*365/10^12)
-
-## Plot the bar chart of aggregates
-g_total <- LinePlotTheme() + geom_boxplot(data=tot_flux,aes(x=Model,y=samp)) +
-    geom_point(data=data.frame(y=rep(tot_UK_Ir,7),x=1:7),aes(x,y),shape=2,size=3) +
-    ylab("Total flux (Tg/yr)\n") + xlab("\n Model")
-if(save_images)
-  ggsave(arrangeGrob(g_admin,g_total,ncol=2),file="./img/Fig6_tot_flux.pdf",height=9,width=18)
-
-### Mole-fraction
-LinePlotTheme() + geom_point(data=s_obs,aes(t,z)) + facet_grid(obs_name~.)
 
 #############################################
 ### Posterior distribution of mole fraction
@@ -1128,25 +1295,32 @@ All_Samps_list <- list()
 
 # Put all the samples (for each model) into one big list
 for(j in 1:6){
-    #load(paste0("Results_",models[j],"TI1.rda"))
-    load(system.file("extdata",paste0("spastaMCMC/Results_",models[j],"TI1.rda"), package = "atminv"))
+    #load(paste0("tempresults/Results_",models[j],"_TI",analyse_sim_data,"_simdata",analyse_sim_data,".rda"))
+    load(system.file("extdata",paste0("spastaMCMC/Results_",models[j],"_TI",analyse_sim_data,"_simdata",analyse_sim_data,".rda"), package = "atminv"))
     All_Samps <- combine_chains(All_Samps)
     All_Samps_list[[j]] <- All_Samps
 }
 
-## Add on Model 1*
-#load(paste0("Results_Box-CoxTI0.rda"))
-load(system.file("extdata",paste0("spastaMCMC/Results_Box-CoxTI0.rda"), package = "atminv"))
-All_Samps_list[[7]] <- combine_chains(All_Samps)
+if(analyse_sim_data == 1) {
+    ## Add on Model 1* and Model 1**
+    #load(paste0("tempresults/Results_Box-Cox_TI0_simdata",analyse_sim_data,".rda"))
+    load(system.file("extdata",paste0("spastaMCMC/Results_Box-Cox_TI0_simdata",analyse_sim_data,".rda"), package = "atminv"))
+    All_Samps_list[[7]] <- combine_chains(All_Samps)
+    
+    #load(paste0("tempresults/Results_Box-Cox_TI2_simdata",analyse_sim_data,".rda"))
+    load(system.file("extdata",paste0("spastaMCMC/Results_Box-Cox_TI2_simdata",analyse_sim_data,".rda"), package = "atminv"))
+    All_Samps_list[[8]] <- combine_chains(All_Samps)
+}
 
 ## To compute this set to if(1). 
-if(0) {
+if(1) {
   
   # parallelise using 4 cores
   registerDoMC(4)
   print("Sampling mole fractions, this will take a while...")
   
   ## for each model
+  set.seed(1)
   All_MFs <- foreach(All_Samps = All_Samps_list,.export='Q_norm_zeta_fn') %dorng% {
       
       # extract the relevant quantities
@@ -1202,7 +1376,7 @@ if(0) {
   crps_axis <- seq(-100,200,by=0.1)
   
   # for each model
-  for (j in 1:7){
+  for (j in 1:length(All_Samps_list)){
     
     # extract the mean
     All_MFs[[j]]$mf_mean
@@ -1226,15 +1400,16 @@ if(0) {
   }
 
   # save results for quick load
-  save(MF_df,file = "./tempresults/MF_df.rda")
+  #save(MF_df,file = paste0("./tempresults/MF_df",analyse_sim_data,".rda"))
+  save(MF_df,file = paste0("./inst/extdata/spastaMCMC/MF_df",analyse_sim_data,".rda"))
 } else {
-  #load("MF_df.rda")
-  load(system.file("extdata",paste0("spastaMCMC/MF_df.rda"), package = "atminv"))
+  #load(paste0("./tempresults/MF_df",analyse_sim_data,".rda"))
+  load(system.file("extdata",paste0("spastaMCMC/MF_df",analyse_sim_data,".rda"), package = "atminv"))
 }
 
 ## print both the flux and mole-fraction diagnostics side-by-side
-print(xtable::xtable(cbind(error_flux,MF_df),
-                     align = c("c","|c", "|c", "c", "c", "|c","c","c|"),
-                     digits=c(NA,1,1,1,1,1,1,1)),
+print(xtable::xtable(cbind(error_flux[,-2],MF_df[,-1]),
+                     align = c("c","|c", "c", "c", "c","c|"),
+                     digits=c(NA,1,1,1,1,1)),
       include.rownames=FALSE)
 

@@ -1,6 +1,7 @@
 Package: atminv
 Type: Package
-Title: Reproducible package for Section 4.1 of "Spatio-temporal bivariate statistical models for atmospheric trace-gas inversion"
+Title: Reproducible package for Section 4.1 of "Spatio-temporal bivariate
+    statistical models for atmospheric trace-gas inversion"
 Description: See README.md on github pages
 Version: 0.1.0
 Date: 2015-08-27
@@ -11,7 +12,8 @@ Suggests:
     grid,
     dplyr,
     tidyr,
-    gstat
+    gstat,
+    plyr
 Imports:
     Matrix,
     ggplot2,
@@ -22,6 +24,4 @@ License: GPL (>= 2)
 NeedsCompilation: no
 URL: http://github.com/andrewzm/atminv
 BugReports: http://github.com/andrewzm/atminv/issues
-
-
-
+RoxygenNote: 5.0.1

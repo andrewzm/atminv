@@ -140,8 +140,9 @@ g0 <- LinePlotTheme() +
                    labels=c(expression(b(0,u[2])), 
                             expression({kappa^2}[Y[2]][Y[1]](0,u[2])))) +     
     #scale_linetype_manual(guide=guide_legend(title="")) +
-    xlab(expression(u[2])) + obs_pt
-    
+    xlab(expression(u[2])) + obs_pt + coord_fixed(ratio=200) +
+    theme(plot.margin=unit(c(1,1,1.1,-1.8),"cm"))
+  # Top right bottom left  
 
 
 df_s2 <- expand.grid(s1 = s_axis,s2=s_axis)
@@ -150,7 +151,7 @@ df_s2$skew222 <- c(skewness222)
 df_s2$b <- as.vector(B)
 
 g02 <-LinePlotTheme() + geom_tile(data=df_s2,aes(s1,s2,fill=b)) + 
-    scale_fill_gradientn(colours=bw,guide=guide_legend(title=expression(b(s,u)))) +
+    scale_fill_gradientn(colours=bw,guide=guide_legend(title=paste(expression(b(s,u)),'\t\t     '))) +
     coord_fixed(xlim=c(-10,10),ylim=c(-10,10)) +
     xlab(expression(s)) + ylab(expression(u))
 g1 <- LinePlotTheme() + geom_tile(data=df_s2,aes(s1,s2,fill=skew211)) + 
@@ -160,7 +161,7 @@ g1 <- LinePlotTheme() + geom_tile(data=df_s2,aes(s1,s2,fill=skew211)) +
 g2<- LinePlotTheme() + geom_tile(data=df_s2,aes(s1,s2,fill=skew222)) + 
     scale_fill_gradientn(colours=bw,guide=guide_legend(title=expression({kappa^3}[Y[2]][Y[2]][Y[2]](0,s[2],s[3])))) +
     coord_fixed(xlim=c(-10,10),ylim=c(-10,10)) +
-    xlab(expression(s[2])) + ylab(expression(s[3])) + obs_pt
+    xlab(expression(s[2])) + ylab(expression(s[3])) + obs_pt + theme(legend.margin=unit(0.25,"cm"))
 library(gridExtra)
 g_all <- grid.arrange(g02,g1,g0,g2,ncol=2)
 if(save_images) ggsave(filename = "./img/Fig1_cumulants_plots.pdf",plot=g_all,width=12,height=8)
