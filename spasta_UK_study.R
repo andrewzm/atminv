@@ -12,6 +12,7 @@
 ## in which to store the results and ~/cache/Assim for temporarily storing results.
 ##################################################################################
 
+#checkpoint::checkpoint("03/30/2016")  ## Uncomment this line to ensure proper packages are installed
 library(plyr)
 library(dplyr)
 library(tidyr)
@@ -26,6 +27,7 @@ library(foreach)        # for parallel computations
 library(doRNG)          # for parallel computations
 library(doMC)           # for parallel computations
 library(slice)          # J. Rougier's homepage
+library(geoR)
 # Also requires gdata, xtable, sp and fields
 
 
@@ -36,7 +38,7 @@ library(slice)          # J. Rougier's homepage
 
 rm(list=ls())
 
-save_images   <- 1      # save images?
+save_images   <- 0      # save images?
 N             <- 12000  # number of MCMC samples per chain
 adapt         <- 1000   # number of adaptation samples
 burnin        <- 8000   # number of burnin samples (incl. adaptation)
@@ -141,7 +143,6 @@ Dist_mat <- fields::rdist(Emissions_land[,c("x","y")])    # find distance matrix
 flux_cov_fn <- function(D,scale,nu) exp(-scale*(D^nu))    # flux cov. function (Gauss scale)
 
 ## Check flux field with geoR
-library(geoR)
 Emissions_land$Highlands <-  as.numeric(Emissions_land$y > 56.4)
 geo_obj <- as.geodata(Emissions_land,coords.col = c("x","y"),data.col = "z")
 ml <- likfit(geo_obj,ini=c(0.5,0.5),fix.lambda=FALSE,fix.nugget=T,
@@ -1313,7 +1314,7 @@ if(analyse_sim_data == 1) {
 }
 
 ## To compute this set to if(1). 
-if(1) {
+if(0) {
   
   # parallelise using 4 cores
   registerDoMC(4)
