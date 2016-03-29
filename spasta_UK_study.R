@@ -12,7 +12,6 @@
 ## in which to store the results and ~/cache/Assim for temporarily storing results.
 ##################################################################################
 
-#checkpoint::checkpoint("03/30/2016")  ## Uncomment this line to ensure proper packages are installed
 library(plyr)
 library(dplyr)
 library(tidyr)
@@ -20,16 +19,17 @@ library(Matrix)
 library(ggplot2)        # for plotting
 library(grid)           # for plotting
 library(gridExtra)      # for plotting
-library(atminv)         # https://github.com/andrewzm/atminv
-library(hmc)            # https://github.com/andrewzm/hmc
-library(linalg)         # https://github.com/andrewzm/linalg
 library(foreach)        # for parallel computations
 library(doRNG)          # for parallel computations
 library(doMC)           # for parallel computations
-library(slice)          # J. Rougier's homepage
 library(geoR)
 # Also requires gdata, xtable, sp and fields
 
+## Not on main repositories
+library(atminv)         # https://github.com/andrewzm/atminv
+library(hmc)            # https://github.com/andrewzm/hmc
+library(linalg)         # https://github.com/andrewzm/linalg
+library(slice)          # J. Rougier's homepage
 
 #-------------------------------------------------------------------
 # 1. Program setup
