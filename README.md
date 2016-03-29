@@ -86,13 +86,13 @@ The file `chemo_UK_study.R` contains the code for Section 4.2. Unfortunately the
 Plots of cumulant functions in Paper 2
 -------
 
-The code to reproduce the plots of the cumulant functions in Section 2 of Paper 2 is in `spasta_cumulants_plots.R`.
+The code to reproduce the plots of the cumulant functions in Appendix B of Paper 2 is in `spasta_cumulants_plots.R`.
 
 
 UK and Ireland observation system simulation experiment in Paper 2
 -------
 
-The file `spasta_UK_study.R` contains the code for Section 5. Unfortunately the files are too large to upload on Github so they have been uploaded [here](http://hpc.niasra.uow.edu.au/ckan/dataset/example-dataset-for-atmospheric-trace-gas-inversion) instead. We only provide an `R` file for this example, which, however is self-contained. The `R` file is named `chemo_UK_study.R` and is found in the root folder on this page. It should run without any problems when all the datasets have been extracted and put in a `../data/` folder. Obviously this path can be changed within the code to suit one's needs.
+The file `spasta_UK_study.R` contains the code for Section 5. Unfortunately the files are too large to upload on Github so they have been uploaded [here](http://hpc.niasra.uow.edu.au/ckan/dataset/example-dataset-for-atmospheric-trace-gas-inversion) instead. We only provide an `R` file for this example, which, however is self-contained. The `R` file is named `spasta_UK_study.R` and is found in the root folder on this page. It should run without any problems when all the datasets have been extracted and put in a `../data/` folder. Obviously this path can be changed within the code to suit one's needs.
 
 The results of Paper 2 are not as straightforward to compute as those in Paper 1. At the beginning of the script one has to choose one of the listed models (e.g., `Box-Cox.uncorrelated`) and set `do_inference = 1`. This will run an MCMC algorithm for that model (with the specified number of parallel chains, burn-in etc.) and save the results in the `inst/extdata/spastaMCMC` folder. This needs to be done for each model, and requires a high performance computing environment. The results are saved in `inst/extdata/spastaMCMC` for quick loading and analysis and therefore can be loaded using `system.file()` as in the script.
 
