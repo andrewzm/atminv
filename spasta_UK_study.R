@@ -12,6 +12,43 @@
 ## in which to store the results and ~/cache/Assim for temporarily storing results.
 ##################################################################################
 
+# > sessionInfo()
+# R version 3.2.3 (2015-12-10)
+# Platform: x86_64-redhat-linux-gnu (64-bit)
+# Running under: CentOS release 6.7 (Final)
+# 
+# locale:
+#   [1] LC_CTYPE=en_AU.UTF-8       LC_NUMERIC=C
+# [3] LC_TIME=en_AU.UTF-8        LC_COLLATE=en_AU.UTF-8
+# [5] LC_MONETARY=en_AU.UTF-8    LC_MESSAGES=en_AU.UTF-8
+# [7] LC_PAPER=en_AU.UTF-8       LC_NAME=C
+# [9] LC_ADDRESS=C               LC_TELEPHONE=C
+# [11] LC_MEASUREMENT=en_AU.UTF-8 LC_IDENTIFICATION=C
+# 
+# attached base packages:
+#   [1] parallel  grid      stats     graphics  grDevices utils     datasets
+# [8] methods   base
+# 
+# other attached packages:
+#   [1] slice_0.10      linalg_1.0      hmc_0.1.0       atminv_0.1.0
+# [5] geoR_1.7-4      MASS_7.3-45     sp_1.2-1        doMC_1.3.3
+# [9] iterators_1.0.8 doRNG_1.6       rngtools_1.2.4  pkgmaker_0.22
+# [13] registry_0.3    foreach_1.4.2   gridExtra_2.0.0 ggplot2_2.1.0
+# [17] Matrix_1.1-4    tidyr_0.2.0     dplyr_0.4.3     plyr_1.8.3
+# 
+# loaded via a namespace (and not attached):
+#   [1] Rcpp_0.12.3         RColorBrewer_1.1-2  R.methodsS3_1.6.1
+# [4] R.utils_1.33.0      tools_3.2.3         SDMTools_1.1-221
+# [7] digest_0.6.9        gtable_0.2.0        lattice_0.20-33
+# [10] DBI_0.3.1           mapproj_1.2-2       spam_1.0-1
+# [13] stringr_1.0.0       fields_8.2-1        maps_3.0.0-2
+# [16] R6_2.1.2            magrittr_1.5        scales_0.4.0
+# [19] codetools_0.2-14    splancs_2.01-34     RandomFields_3.0.62
+# [22] assertthat_0.1      xtable_1.7-4        colorspace_1.2-6
+# [25] labeling_0.3        stringi_1.0-1       lazyeval_0.1.10
+# [28] munsell_0.4.3       R.oo_1.18.0
+
+
 library(plyr)
 library(dplyr)
 library(tidyr)
@@ -47,7 +84,7 @@ n_parallel    <- 10     # number of parallel chains
 do_inference  <- 0      # do inference or load results?
 true_inventory <- 1      # 0: Europe inventory, 1: UK inventory, 2: Australia inventory
 sim_data     <- 1      # 0: use real UK data, 1: simulated data from UK, 2: simulated data from Australia
-model <- "Gaussian.uncorrelated" # Can be one of the following:
+model <- "Box-Cox" # Can be one of the following:
 # Box-Cox, Lognormal, Gaussian,   Box-Cox.uncorrelated, 
 # Lognormal.uncorrelated or Gaussian.uncorrelated
 
@@ -143,16 +180,23 @@ Dist_mat <- fields::rdist(Emissions_land[,c("x","y")])    # find distance matrix
 flux_cov_fn <- function(D,scale,nu) exp(-scale*(D^nu))    # flux cov. function (Gauss scale)
 
 ## Check flux field with geoR
-Emissions_land$Highlands <-  as.numeric(Emissions_land$y > 56.4)
-geo_obj <- as.geodata(Emissions_land,coords.col = c("x","y"),data.col = "z")
-ml <- likfit(geo_obj,ini=c(0.5,0.5),fix.lambda=FALSE,fix.nugget=T,
-             trend = trend.spatial(~1 + Emissions_land$Highlands,geodata = geo_obj))
-summary(ml) %>% print()
-#xv.ml <- xvalid(geodata = geo_obj, model=ml)
+if(true_inventory ==1 & sim_data == 1) {
+  print("geoR Analysis of UK and Ireland inventory (with Highlands as covariate)")
+  Emissions_land$Highlands <-  as.numeric(Emissions_land$y > 56.4)
+  geo_obj <- as.geodata(Emissions_land,coords.col = c("x","y"),data.col = "z")
+  ml <- likfit(geo_obj,ini=c(0.5,0.5),fix.lambda=FALSE,fix.nugget=T, ## Check lambda and AIC 
+               trend = trend.spatial(~1 + Emissions_land$Highlands,geodata = geo_obj))
+  summary(ml) %>% print()
+  
+  print("geoR Analysis of UK and Ireland inventory (with Highlands as covariate) with lambda fixed to 1")
+  ## Now repeat with lambda fixed to 1 (check AIC)
+  ml2 <- likfit(geo_obj,ini=c(0.5,0.5),fix.lambda=TRUE,fix.nugget=T,lambda = 1,
+                trend = trend.spatial(~1 + Emissions_land$Highlands,geodata = geo_obj))
+  summary(ml2) %>% print()
+}
 
-ml2 <- likfit(geo_obj,ini=c(0.5,0.5),fix.lambda=TRUE,fix.nugget=T,lambda = 1,
-             trend = trend.spatial(~1 + Emissions_land$Highlands,geodata = geo_obj))
-#xv.ml2 <- xvalid(geodata = geo_obj, model=ml2)
+
+
 
 #-------------------------------------------------------------------
 # 2. Data preprocessing
@@ -350,12 +394,6 @@ if(save_images) {
     ggsave("./img/SRR_01Jan.png",plot=g_SRR,width=6.7,height=6.7)
 }
 
-# Emissions_map("z") + 
-#     scale_fill_distiller(palette="Greys",trans="reverse", guide = guide_legend(title="flux (g/s)")) +
-#     geom_point(data=Station_locs,aes(x=unlist(x),y=unlist(y)),size=4) +
-#     geom_text(data=Station_locs,aes(x=unlist(x),y=unlist(y)+0.3,label=unlist(name)),col="black")
-
-
 ## Now we do the pruning so we focus on the UK.
 ## First we remove the "background Europe" from the data
 Stations <- lapply(Stations,function(l) {
@@ -385,78 +423,35 @@ Emissions_map("z2")
 ## Create the "wrong" inventory from Australia
 data("Emissions_Australia",package="atminv")
 Emissions_Australia$mask <- 0
-Emissions_Australia$mask[id + 28*63 + 5] <- 1  # Great results but includes some sea (makes results stronger though)
+Emissions_Australia$mask[id + 28*63 + 5] <- 1  # Cut out from Northern Australia
 #Emissions_Australia$mask[id + 17*63 + 12] <- 1  # OK only land but not as "Gaussian" as above
 (ggplot(Emissions_Australia) + geom_tile(aes(x=lon,y=lat,fill=mask)) ) %>% draw_world()  + xlim(c(112,156.5)) + ylim(c(-40.25,-10.75))
 Emissions_land$z3 <- Emissions_Australia$CH4flux_tot[Emissions_Australia$mask==1] # Pretend this is the inventory
 Emissions$z3 <- Emissions_land$z3
 Emissions_map("z3") + scale_fill_distiller(palette="Spectral",limits=c(0,200),name="")
 
-## Draw domains
-#gUK_inv <- (LinePlotTheme() + geom_tile(data=filter(Emissions_all,x <= max(Emissions_land$x) &
-                                             # x >= min(Emissions_land$x) &
-                                             # y >= min(Emissions_land$y) & 
-                                             # y <= max(Emissions_land$y)),
-gUK_inv <- (LinePlotTheme() + geom_tile(data=Emissions_all,aes(x=x,y=y,fill=pmin(z,2000),alpha = 0)) + 
-                geom_tile(data=Emissions_land,aes(x=x,y=y,fill=pmin(z,2000),alpha = 1)))%>%
-    draw_world() +
-    scale_fill_distiller(palette="Spectral",name="flux (g/s)\n") +
-    scale_alpha(guide = "none") +
-    xlim(min(Emissions_land$x)-3,max(Emissions_land$x)+4) +
-    ylim(min(Emissions_land$y)-4,max(Emissions_land$y)+4) + coord_fixed() + xlab("lon (deg)") + ylab("lat (deg)")
-gUK_inv2 <- Emissions_map("z") + scale_fill_distiller(palette="Greys",trans="reverse",name="flux (g/s)\n",limits=c(2000,0)) + xlab("lon (deg)\n") + ylab("lat (deg)\n")
-
-## Draw domains
-Europe_masked <- filter(Emissions_all,mask == 1)
-# gEUR_inv <- (LinePlotTheme() + geom_tile(data=filter(Emissions_all,x < max(Europe_masked$x) &
-#                                              x > min(Europe_masked$x) &
-#                                              y > min(Europe_masked$y) & 
-#                                              y < max(Europe_masked$y)),
-gEUR_inv <- (LinePlotTheme() + geom_tile(data=Emissions_all,
-                                         aes(x=x,y=y,fill=pmin(z,1500),alpha=mask))) %>%
-    draw_world() +
-    scale_fill_distiller(palette="Spectral",name="flux (g/s)\n") +
-    scale_alpha(guide = "none") +
-    xlim(min(Europe_masked$x)-3,max(Europe_masked$x)+4) +
-    ylim(min(Europe_masked$y)-4,max(Europe_masked$y)+4) + coord_fixed()+ xlab("lon (deg)") + ylab("lat (deg)")
-gEUR_inv2 <- Emissions_map("z2") + scale_fill_distiller(palette="Greys",trans="reverse",name="flux (g/s)\n",limits=c(1200,0)) + xlab("lon (deg)\n") + ylab("lat (deg)\n")
-
-
-Au_masked <- filter(Emissions_Australia,mask == 1)
-gAU_inv <- (LinePlotTheme() + #geom_tile(data=filter(Emissions_Australia,lon < max(Au_masked$lon) &
-                              #                 lon > min(Au_masked$lon) &
-                              #                 lat > min(Au_masked$lat) & 
-                              #                 lat < max(Au_masked$lat)),
-                            geom_tile(data=Emissions_Australia,
-                               aes(x=lon,y=lat,fill=pmin(CH4flux_tot,120),alpha=mask))) %>%
-                    draw_world() +
-                    scale_fill_distiller(palette="Spectral",name="flux (g/s)\n") +
-                    scale_alpha(guide = "none") +
-                    xlim(min(Au_masked$lon)-3,max(Au_masked$lon)+4) +
-                    ylim(min(Au_masked$lat)-4,max(Au_masked$lat)+4) + coord_fixed() + xlab("lon (deg)") + ylab("lat (deg)")
-gAU_inv2 <- Emissions_map("z3") + scale_fill_distiller(palette="Greys",trans="reverse",name="flux (g/s)\n",limits=c(120,0)) + xlab("lon (deg)\n") + ylab("lat (deg)\n")
-
-
-if(save_images) {
-    gALL_inv <- arrangeGrob(gUK_inv2,gEUR_inv2,gAU_inv2,nrow=1)
-    ggsave(filename = "./img/Fig2_all_inventories.pdf",
-           gALL_inv,
-           width=17,height=5.5)
-}
-    
-    
-png(filename="../SpatStat_paper/Reviews/hists.png",width = 4000,height=1600,res = 300)
-par(mfrow=c(1,2))
-hist(Emissions$z,xlab = "flux (g/s)",main="")
-hist(Emissions$z3,xlab = "flux (g/s)",main="")
-dev.off()
-
-
 ## Check flux field with geoR
-library(geoR)
+## ================================
+
+## Europe inventory
 geo_obj <- as.geodata(Emissions_land,coords.col = c("x","y"),data.col = "z2")
-likfit(geo_obj,ini=c(0.5,0.5),fix.lambda=FALSE,fix.nugget=T) %>%
+if(sim_data == 1) {  ## If we are using Highlands as a covariate (because it's the UK study)
+  print("geoR Analysis of European inventory (with Highlands as covariate)")
+  likfit(geo_obj,ini=c(0.5,0.5),fix.lambda=FALSE,fix.nugget=T, ## Check lambda and AIC 
+               trend = trend.spatial(~1 + Emissions_land$Highlands,geodata = geo_obj)) %>%
+  summary(ml) %>% print()  
+} else {
+  print("geoR Analysis of European inventory (intercept-only model)")
+  likfit(geo_obj,ini=c(0.5,0.5),fix.lambda=FALSE,fix.nugget=T) %>%
     summary() %>% print()
+}
+
+## Australia inventory
+print("geoR Analysis of Australia inventory (intercept-only model)")
+geo_obj <- as.geodata(Emissions_land,coords.col = c("x","y"),data.col = "z3")
+likfit(geo_obj,ini=c(0.5,0.5),fix.lambda=FALSE,fix.nugget=T) %>%
+  summary() %>% print()
+  
 
 if(true_inventory == 1) {
     Zinv <- Emissions_land$z
@@ -466,10 +461,10 @@ if(true_inventory == 1) {
     Zinv <- Emissions_land$z3
 } 
 
-if(true_inventory == 2 & sim_data == 1) {   # If using Australian inventory for UK sim amplify by 10
-    Zinv <- mean(Emissions_land$z)/mean(Zinv) * Zinv
-    }
-
+if(true_inventory == 2 & sim_data == 1) { 
+  # If using Australian inventory for UK normalise the values (otherwise too different)
+  Zinv <- mean(Emissions_land$z)/mean(Zinv) * Zinv
+}
 
 
 #-------------------------------------------------------------------
@@ -1297,7 +1292,8 @@ All_Samps_list <- list()
 # Put all the samples (for each model) into one big list
 for(j in 1:6){
     #load(paste0("tempresults/Results_",models[j],"_TI",analyse_sim_data,"_simdata",analyse_sim_data,".rda"))
-    load(system.file("extdata",paste0("spastaMCMC/Results_",models[j],"_TI",analyse_sim_data,"_simdata",analyse_sim_data,".rda"), package = "atminv"))
+    load(system.file("extdata",paste0("spastaMCMC/Results_",models[j],"_TI",analyse_sim_data,"_simdata",analyse_sim_data,".rda"), 
+                     package = "atminv"))
     All_Samps <- combine_chains(All_Samps)
     All_Samps_list[[j]] <- All_Samps
 }
@@ -1414,3 +1410,50 @@ print(xtable::xtable(cbind(error_flux[,-2],MF_df[,-1]),
                      digits=c(NA,1,1,1,1,1)),
       include.rownames=FALSE)
 
+## Other inventory maps
+
+## Draw UK inventory
+gUK_inv <- (LinePlotTheme() + geom_tile(data=Emissions_all,aes(x=x,y=y,fill=pmin(z,2000),alpha = 0)) + 
+              geom_tile(data=Emissions_land,aes(x=x,y=y,fill=pmin(z,2000),alpha = 1)))%>%
+  draw_world() +
+  scale_fill_distiller(palette="Spectral",name="flux (g/s)\n") +
+  scale_alpha(guide = "none") +
+  xlim(min(Emissions_land$x)-3,max(Emissions_land$x)+4) +
+  ylim(min(Emissions_land$y)-4,max(Emissions_land$y)+4) + coord_fixed() + xlab("lon (deg)") + ylab("lat (deg)")
+gUK_inv2 <- Emissions_map("z") + scale_fill_distiller(palette="Greys",trans="reverse",name="flux (g/s)\n",limits=c(2000,0)) + xlab("lon (deg)\n") + ylab("lat (deg)\n")
+
+## Draw Europe inventory
+Europe_masked <- filter(Emissions_all,mask == 1)
+gEUR_inv <- (LinePlotTheme() + geom_tile(data=Emissions_all,
+                                         aes(x=x,y=y,fill=pmin(z,1500),alpha=mask))) %>%
+  draw_world() +
+  scale_fill_distiller(palette="Spectral",name="flux (g/s)\n") +
+  scale_alpha(guide = "none") +
+  xlim(min(Europe_masked$x)-3,max(Europe_masked$x)+4) +
+  ylim(min(Europe_masked$y)-4,max(Europe_masked$y)+4) + coord_fixed()+ xlab("lon (deg)") + ylab("lat (deg)")
+gEUR_inv2 <- Emissions_map("z2") + scale_fill_distiller(palette="Greys",trans="reverse",name="flux (g/s)\n",limits=c(1200,0)) + xlab("lon (deg)\n") + ylab("lat (deg)\n")
+
+## Draw Australian inventory
+Au_masked <- filter(Emissions_Australia,mask == 1)
+gAU_inv <- (LinePlotTheme() + geom_tile(data=Emissions_Australia,
+                                        aes(x=lon,y=lat,fill=pmin(CH4flux_tot,120),alpha=mask))) %>%
+  draw_world() +
+  scale_fill_distiller(palette="Spectral",name="flux (g/s)\n") +
+  scale_alpha(guide = "none") +
+  xlim(min(Au_masked$lon)-3,max(Au_masked$lon)+4) +
+  ylim(min(Au_masked$lat)-4,max(Au_masked$lat)+4) + coord_fixed() + xlab("lon (deg)") + ylab("lat (deg)")
+gAU_inv2 <- Emissions_map("z3") + scale_fill_distiller(palette="Greys",trans="reverse",name="flux (g/s)\n",limits=c(120,0)) + xlab("lon (deg)\n") + ylab("lat (deg)\n")
+
+
+if(save_images) {
+  gALL_inv <- arrangeGrob(gUK_inv2,gEUR_inv2,gAU_inv2,nrow=1)
+  ggsave(filename = "./img/Fig2_all_inventories.pdf",
+         gALL_inv,
+         width=17,height=5.5)
+  
+  png(filename="../SpatStat_paper/Reviews/hists.png",width = 4000,height=1600,res = 300)
+  par(mfrow=c(1,2))
+  hist(Emissions$z,xlab = "flux (g/s)",main="")
+  hist(Emissions$z3,xlab = "flux (g/s)",main="")
+  dev.off()
+}
